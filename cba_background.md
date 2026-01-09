@@ -5,15 +5,15 @@ The CBA was established by His Majesty King Charles III in 2020 to accelerate th
 ## The CBA principles for regenerative landscapes
 CBA’s seven principles cover:
 - **Three Sustainability Principles:**
-    - 1. Natural Environment
-    - 2. Social Well-being
-    - 3. Economic Prosperity
+    - Natural Environment
+    - Social Well-being
+    - Economic Prosperity
 - **Three Resilience Principles:**
-    - 4. Diversity
-    - 5. Connectivity
-    - 6. Adaptive Capacity
+    - Diversity
+    - Connectivity
+    - Adaptive Capacity
 - **One Local Context Principle:**
-    - 7. Harmony
+    - Harmony
 
 Principles have been carefully selected to cover all issues, avoid redundancy, and allow checking of compliance with measurable criteria and indicators. This standard is meant as a source of inspiration during all development phases of a regenerative project, from design and planning to implementation and evaluation.
 
