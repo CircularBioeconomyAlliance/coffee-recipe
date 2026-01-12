@@ -1,15 +1,12 @@
 # AWS Hackathon | Team Coffee Recipe ☕
 
-The Circular Bioeconomy Alliance (CBA) is participating in the AWS Breaking Barriers Challenge 2026 to tackle a fundamental barrier to ambitious landscape regeneration: fragmented, inconsistent data. Many projects implementing nature-based solutions (ranging from regenerative agriculture to ecological restoration) track outcomes inconsistently, making it difficult to ensure accountability, compare results, demonstrate impact to donors and investors, or understand which approaches work best in different contexts.
+proaches work best in different contexts.
  
-At the heart of CBA’s work are seven science-based Principles for Regenerative Landscapes, which define success across nature, climate, and people. Today, these principles are difficult to measure consistently, robustly, and cost-effectively across projects and geographies, limiting learning and scale.
+At the heart of CBA’s workThe Circular Bioeconomy Alliance (CBA) is participating in the AWS Breaking Barriers Challenge to tackle a fundamental barrier to ambitious landscape regeneration: fragmented, inconsistent data. Many projects implementing nature-based solutions (ranging from regenerative agriculture to ecological restoration) track outcomes inconsistently, making it difficult to ensure accountability, compare results, demonstrate impact to donors and investors, or understand which ap are seven science-based Principles for Regenerative Landscapes, which define success across nature, climate, and people. Today, these principles are difficult to measure consistently, robustly, and cost-effectively across projects and geographies, limiting learning and scale.
  
-During this hackathon, we aim to build a digital foundation for a unified Monitoring & Evaluation (M&E) system that translates CBA’s 7 Principles into practical, measurable indicators. This system will use AI to guide project teams in identifying and tracking the indicators that best prove their impact. The CBA seeks to deploy this system across all our “Living Labs” which are projects on the ground, e.g., demonstration cases of how nature-based solutions deliver regenerative outcomes. By turning fragmented field data into a shared, cloud-based platform, we can strengthen accountability and create clear, evidence-based blueprints that show regenerative, nature-based economies are investable, scalable, and ready for global adoption.
-
-## The challenge
-Create solutions to help project teams, e.g. implementers, farmers, to:
-1. Select indicators to measure progress towards the CBA Principles. Indicator selection should be based on local context (e.g. project description, objectives, and expected outcomes) as well as indicators' ease of use, accuracy, and costs.
-2. Systematically collect data and transfer this data to an unified data lake (managed by CBA).
+During this hackathon, we aim to build a digital foundation for a unified Monitoring and Evaluation (M&E) system that translates CBA’s 7 Principles into practical, measurable indicators. Specifically, we aim to address two complementary challenges:
+1. **Indicator selection:** help project teams identify the most relevant and practical metrics to track progress of ‘Living Labs’ – which are demonstration sites of regenerative agricultural production within a wider landscape. Indicators will be tailored to local context while ensuring accessibility, affordability, and reliability.
+2. **Data consolidation:** supporting project implementers to systematically collect and transfer their data into a unified system managed by CBA. This will turn fragmented field-level information into a shared resource, strengthening accountability and enabling cross-project insights that show how regenerative approaches can be scaled, invested in, and adopted globally.
 
 ## Some useful information/data:
 - About the CBA, the principles and criteria, and the M&E Framework. [cba_inputs/CBA ME Background.pdf](https://github.com/CircularBioeconomyAlliance/coffee-recipe/blob/main/cba_inputs/CBA%20ME%20Background.pdf)
