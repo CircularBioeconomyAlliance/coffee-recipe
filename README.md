@@ -1,7 +1,5 @@
 # AWS Hackathon | Team Coffee Recipe ☕
 
-proaches work best in different contexts.
- 
 At the heart of CBA’s workThe Circular Bioeconomy Alliance (CBA) is participating in the AWS Breaking Barriers Challenge to tackle a fundamental barrier to ambitious landscape regeneration: fragmented, inconsistent data. Many projects implementing nature-based solutions (ranging from regenerative agriculture to ecological restoration) track outcomes inconsistently, making it difficult to ensure accountability, compare results, demonstrate impact to donors and investors, or understand which ap are seven science-based Principles for Regenerative Landscapes, which define success across nature, climate, and people. Today, these principles are difficult to measure consistently, robustly, and cost-effectively across projects and geographies, limiting learning and scale.
  
 During this hackathon, we aim to build a digital foundation for a unified Monitoring and Evaluation (M&E) system that translates CBA’s 7 Principles into practical, measurable indicators. Specifically, we aim to address two complementary challenges:
