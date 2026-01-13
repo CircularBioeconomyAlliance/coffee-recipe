@@ -5,15 +5,7 @@ import os
 from pathlib import Path
 
 from strands import Agent
-from strands_tools import (
-    calculator,
-    current_time,
-    file_write,
-    http_request,
-    memory,
-    think,
-    use_llm,
-)
+from strands_tools import current_time, file_write, http_request, memory, use_llm
 
 MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 KNOWLEDGE_BASE_ID = "CXRV29T1AF"
@@ -39,8 +31,6 @@ def main():
             http_request,
             file_write,
             current_time,
-            think,
-            calculator,
         ],
     )
 

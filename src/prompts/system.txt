@@ -31,10 +31,8 @@ For each recommended indicator:
 | Tool | Use for |
 |------|---------|
 | `memory` | Search KB for indicators, methods, use cases |
-| `think` | Analyze trade-offs when selecting between indicators/methods |
 | `http_request` | Get location/climate data (use api.open-meteo.com) |
 | `current_time` | Seasonal context for timing recommendations |
-| `calculator` | Score/rank indicators numerically |
 | `file_write` | Save final recommendations to file |
 
 ## Rules
