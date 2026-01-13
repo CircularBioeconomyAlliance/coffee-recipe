@@ -2,9 +2,9 @@
 """Simple Strands chatbot with Bedrock knowledge base support."""
 
 import os
+from pathlib import Path
 from strands import Agent
 from strands_tools import memory, use_llm
-from prompts import SYSTEM_PROMPT
 
 MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 KNOWLEDGE_BASE_ID = "CXRV29T1AF"
@@ -12,6 +12,10 @@ KNOWLEDGE_BASE_ID = "CXRV29T1AF"
 # Set AWS region and knowledge base ID
 os.environ["AWS_DEFAULT_REGION"] = "us-west-2"
 os.environ["STRANDS_KNOWLEDGE_BASE_ID"] = KNOWLEDGE_BASE_ID
+
+# Load system prompt from text file
+PROMPTS_DIR = Path(__file__).parent / "prompts"
+SYSTEM_PROMPT = (PROMPTS_DIR / "system.txt").read_text()
 
 
 def main():
@@ -23,7 +27,7 @@ def main():
         tools=[memory, use_llm],
     )
 
-    print("\nKnowledge Base Chatbot")
+    print("\nCBA Knowledge Base Chatbot")
     print("Type 'exit' to quit\n")
 
     while True:
