@@ -17,17 +17,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 from strands import Agent
 from strands_tools import memory, use_llm
 
-# Load system prompt from text file (relative to this file in src/)
-PROMPT_PATH = Path(__file__).parent / "prompts" / "system.txt"
-SYSTEM_PROMPT = PROMPT_PATH.read_text()
-
-# Configuration
-MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-KNOWLEDGE_BASE_ID = "CXRV29T1AF"
-
-# Set AWS region and knowledge base ID
-os.environ["AWS_DEFAULT_REGION"] = "us-west-2"
-os.environ["STRANDS_KNOWLEDGE_BASE_ID"] = KNOWLEDGE_BASE_ID
+# Import shared configuration
+from config import MODEL_ID, KNOWLEDGE_BASE_ID, SYSTEM_PROMPT
 
 # Set up page configuration
 st.set_page_config(
