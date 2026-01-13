@@ -1,0 +1,9 @@
+[project]
+name = "coffee-recipe"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "strands-agents>=1.21.0",
+    "strands-agents-tools>=0.2.19",
+]

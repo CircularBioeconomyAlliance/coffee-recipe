@@ -1,13 +1,17 @@
-# AWS Hackathon | Team Coffee Recipe ☕
+# Simple Strands Chatbot
 
-At the heart of CBA’s workThe Circular Bioeconomy Alliance (CBA) is participating in the AWS Breaking Barriers Challenge to tackle a fundamental barrier to ambitious landscape regeneration: fragmented, inconsistent data. Many projects implementing nature-based solutions (ranging from regenerative agriculture to ecological restoration) track outcomes inconsistently, making it difficult to ensure accountability, compare results, demonstrate impact to donors and investors, or understand which ap are seven science-based Principles for Regenerative Landscapes, which define success across nature, climate, and people. Today, these principles are difficult to measure consistently, robustly, and cost-effectively across projects and geographies, limiting learning and scale.
- 
-During this hackathon, we aim to build a digital foundation for a unified Monitoring and Evaluation (M&E) system that translates CBA’s 7 Principles into practical, measurable indicators. Specifically, we aim to address two complementary challenges:
-1. **Indicator selection:** help project teams identify the most relevant and practical metrics to track progress of ‘Living Labs’ – which are demonstration sites of regenerative agricultural production within a wider landscape. Indicators will be tailored to local context while ensuring accessibility, affordability, and reliability.
-2. **Data consolidation:** supporting project implementers to systematically collect and transfer their data into a unified system managed by CBA. This will turn fragmented field-level information into a shared resource, strengthening accountability and enabling cross-project insights that show how regenerative approaches can be scaled, invested in, and adopted globally.
+A minimal chatbot built with Strands.
 
-## Some useful information/data:
-- About the CBA, the principles and criteria, and the M&E Framework. [cba_inputs/CBA ME Background.pdf](https://github.com/CircularBioeconomyAlliance/coffee-recipe/blob/main/cba_inputs/CBA%20ME%20Background.pdf)
-- The CBA list of indicators, respective methods (as a indicator usually can be measured via different methods), and additional attributes. [cba_inputs/CBA ME Indicators List.xlsx](https://github.com/CircularBioeconomyAlliance/coffee-recipe/blob/main/cba_inputs/CBA%20ME%20Indicators%20List.xlsx)
-- An example use case, e.g., project description, including its objectives and expected outcomes. [cba_inputs/Use Case Regenerative Cotton in Chad.pdf](https://github.com/CircularBioeconomyAlliance/coffee-recipe/blob/main/cba_inputs/Use%20Case%20Regenerative%20Cotton%20in%20Chad.pdf)
-- A sample of appropriate indicators for the use case above. [cba_inputs/Indicators for Use Case Regenerative Cotton in Chad.xlsx](https://github.com/CircularBioeconomyAlliance/coffee-recipe/blob/main/cba_inputs/Indicators%20for%20Use%20Case%20Regenerative%20Cotton%20in%20Chad.xlsx)
+## Setup
+
+```bash
+uv sync
+```
+
+## Run
+
+```bash
+uv run strands/agent.py
+```
+
+Type your messages and the chatbot will respond. Type 'exit' to quit.
