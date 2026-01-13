@@ -3,8 +3,17 @@
 
 import os
 from pathlib import Path
+
 from strands import Agent
-from strands_tools import memory, use_llm
+from strands_tools import (
+    calculator,
+    current_time,
+    file_write,
+    http_request,
+    memory,
+    think,
+    use_llm,
+)
 
 MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 KNOWLEDGE_BASE_ID = "CXRV29T1AF"
@@ -24,7 +33,15 @@ def main():
     agent = Agent(
         model=MODEL_ID,
         system_prompt=SYSTEM_PROMPT,
-        tools=[memory, use_llm],
+        tools=[
+            memory,
+            use_llm,
+            http_request,
+            file_write,
+            current_time,
+            think,
+            calculator,
+        ],
     )
 
     print("\nCBA Knowledge Base Chatbot")
