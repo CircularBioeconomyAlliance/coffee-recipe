@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.12"
 
 [[package]]
@@ -367,6 +367,7 @@ name = "coffee-recipe"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "boto3" },
     { name = "openpyxl" },
     { name = "pypdf" },
     { name = "strands-agents" },
@@ -376,6 +377,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "boto3", specifier = ">=1.35.0" },
     { name = "openpyxl", specifier = ">=3.1.0" },
     { name = "pypdf", specifier = ">=4.0.0" },
     { name = "strands-agents", specifier = ">=1.21.0" },

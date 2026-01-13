@@ -15,10 +15,19 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from strands import Agent
-from strands_tools import memory, use_llm
+from strands_tools import use_llm
 
 # Import shared configuration
 from config import MODEL_ID, KNOWLEDGE_BASE_ID, SYSTEM_PROMPT
+
+# Import workflow helper functions
+from workflow import (
+    upload_document_to_s3,
+    query_knowledge_base,
+    extract_project_info,
+    get_missing_fields,
+    is_info_complete
+)
 
 # Set up page configuration
 st.set_page_config(
@@ -246,6 +255,23 @@ def initialize_session_state():
     if "messages" not in st.session_state:
         current_session = st.session_state.sessions.get(st.session_state.current_session_id, {})
         st.session_state.messages = current_session.get("messages", [])
+    
+    # Initialize workflow state variables (Requirements 1.3, 1.5, 9.1)
+    if "workflow_phase" not in st.session_state:
+        st.session_state.workflow_phase = "upload"
+    
+    if "project_info" not in st.session_state:
+        st.session_state.project_info = {
+            "location": None,
+            "project_type": None,
+            "outcomes": [],
+            "budget": None,
+            "capacity": None,
+            "documents_uploaded": False
+        }
+    
+    if "indicators" not in st.session_state:
+        st.session_state.indicators = []
 
 # Session management functions
 def create_new_session():
@@ -388,7 +414,7 @@ def get_agent():
     agent = Agent(
         model=MODEL_ID,
         system_prompt=SYSTEM_PROMPT,
-        tools=[memory, use_llm],
+        tools=[use_llm],
     )
     return agent
 
@@ -435,6 +461,7 @@ def main():
     - Renders sidebar components (Requirements 2.1, 2.3, 3.1, 3.2)
     - Renders main chat area (Requirements 1.1, 1.3)
     - Handles user interactions (Requirements 1.1, 1.2, 1.4)
+    - Routes to phase-based UI (Requirements 1.1, 10.1)
     """
     
     # Set up main title
@@ -442,6 +469,10 @@ def main():
     
     # Initialize session state
     initialize_session_state()
+    
+    # 4.1 Phase detection - Get current workflow phase and route to appropriate UI
+    # Requirements: 1.1, 10.1
+    phase = st.session_state.workflow_phase
 
     # Render sidebar components
     with st.sidebar:
@@ -553,70 +584,420 @@ def main():
             if hasattr(st.session_state, 'file_content'):
                 st.session_state.file_content = None
 
-    # Render main chat area
-    st.header("💬 Circular Bioeconomy Conversation")
-    
-    # Add helpful context message for new sessions
-    if not st.session_state.messages:
-        st.info("""
-        🌱 **Welcome to the Circular Bioeconomy Alliance Chat Assistant!**
-        
-        I'm here to help you explore topics related to:
-        • **Sustainable resource management** and circular economy principles
-        • **Nature-based solutions** for climate and biodiversity challenges  
-        • **Regenerative practices** in agriculture, forestry, and industry
-        • **Innovative financing** for nature-positive investments
-        • **Community-led initiatives** and indigenous knowledge systems
-        
-        Feel free to ask questions, share documents, or discuss how we can build a more sustainable future together!
-        """)
+    # Route to appropriate UI based on workflow phase
+    if phase == 'upload':
+        render_upload_phase()
+    elif phase == 'extract':
+        render_extract_phase()
+    elif phase == 'ask':
+        render_ask_phase()
+    elif phase == 'retrieve':
+        render_retrieve_phase()
+    elif phase == 'chat':
+        render_chat_phase()
+    else:
+        st.error(f"Unknown workflow phase: {phase}")
 
-    # 6.1 Display chat messages (Requirements 1.1, 1.3)
-    # Use st.chat_message to show message history
-    # Display both user and assistant messages
-    for message in st.session_state.messages:
+
+def render_upload_phase():
+    """
+    Render upload phase UI with error handling.
+    Requirements: 2.1, 2.5, 10.3
+    """
+    st.header("📤 Document Upload")
+    
+    st.info("""
+    🌱 **Welcome to the CBA Indicator Selection Assistant!**
+    
+    To help you find the most relevant sustainability indicators, you can:
+    - **Upload project documents** (PDF, Excel, CSV, TXT) for automatic information extraction
+    - **Skip to manual entry** if you prefer to provide information directly
+    """)
+    
+    # Show file uploader prominently
+    uploaded_file = st.file_uploader(
+        "Upload your project documents",
+        type=["pdf", "txt", "csv", "xlsx"],
+        help="Upload project proposals, reports, or data files to help us understand your project context"
+    )
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # On upload: extract text, transition to 'extract'
+        if uploaded_file is not None:
+            if st.button("📄 Process Document", use_container_width=True, type="primary"):
+                try:
+                    # Extract file content
+                    file_content = extract_file_content(uploaded_file)
+                    
+                    # Check if extraction was successful
+                    if file_content and not file_content.startswith("Error"):
+                        # Store in session state
+                        st.session_state.file_content = file_content
+                        st.session_state.uploaded_file_name = uploaded_file.name
+                        st.session_state.project_info['documents_uploaded'] = True
+                        
+                        # Transition to extract phase
+                        st.session_state.workflow_phase = 'extract'
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Failed to process file: {file_content}")
+                        st.info("💡 Please try a different file or skip to manual entry.")
+                
+                except Exception as e:
+                    st.error(f"❌ Error processing file: {str(e)}")
+                    st.info("💡 Please try a different file or skip to manual entry.")
+    
+    with col2:
+        # On skip: transition to 'ask'
+        if st.button("⏭️ Skip to Manual Entry", use_container_width=True):
+            st.session_state.project_info['documents_uploaded'] = False
+            st.session_state.workflow_phase = 'ask'
+            st.rerun()
+
+
+def render_extract_phase():
+    """
+    Render extract phase UI with error handling.
+    Requirements: 3.1, 3.4, 3.5
+    """
+    st.header("🔍 Extracting Information")
+    
+    # Show extracting message
+    with st.spinner("Analyzing your document and extracting project information..."):
+        # Get file content from session state
+        file_content = st.session_state.get('file_content', '')
+        
+        if file_content:
+            try:
+                # Call extract_project_info()
+                extracted_info = extract_project_info(file_content)
+                
+                # Check if any information was extracted
+                has_info = any(
+                    value is not None and value != [] and value != ''
+                    for key, value in extracted_info.items()
+                )
+                
+                if has_info:
+                    # Update project_info in session state
+                    for key, value in extracted_info.items():
+                        if value is not None:
+                            st.session_state.project_info[key] = value
+                    
+                    st.success("✅ Information extracted successfully!")
+                    
+                    # Show what was extracted
+                    st.subheader("Extracted Information:")
+                    for key, value in extracted_info.items():
+                        if value is not None and value != [] and value != '':
+                            st.write(f"**{key.replace('_', ' ').title()}:** {value}")
+                else:
+                    st.warning("⚠️ Could not extract information from the document. You'll be able to enter information manually.")
+            
+            except Exception as e:
+                st.error(f"❌ Error during extraction: {str(e)}")
+                st.info("Don't worry - you can still provide information manually in the next step.")
+        else:
+            st.warning("No document content found. Proceeding to manual entry.")
+    
+    # Transition to 'ask' phase
+    st.session_state.workflow_phase = 'ask'
+    st.rerun()
+
+
+def render_ask_phase():
+    """
+    Render ask phase UI.
+    Requirements: 4.2, 4.3, 4.4, 10.4
+    """
+    st.header("❓ Project Information")
+    
+    # Get missing fields
+    missing = get_missing_fields(st.session_state.project_info)
+    
+    if missing:
+        # Display missing fields clearly
+        st.info(f"📋 Please provide the following information to help us recommend relevant indicators:")
+        
+        # Show form for each missing field
+        with st.form("project_info_form"):
+            form_data = {}
+            
+            for field in missing:
+                if field == 'location':
+                    form_data[field] = st.text_input(
+                        "Location",
+                        placeholder="e.g., Chad, West Africa",
+                        help="Geographic location of your project"
+                    )
+                elif field == 'project_type':
+                    form_data[field] = st.text_input(
+                        "Project Type",
+                        placeholder="e.g., regenerative cotton farming",
+                        help="Type of circular bioeconomy project"
+                    )
+                elif field == 'outcomes':
+                    outcomes_text = st.text_area(
+                        "Expected Outcomes",
+                        placeholder="e.g., improved soil health, reduced water use, increased biodiversity",
+                        help="List your expected project outcomes (one per line or comma-separated)"
+                    )
+                    # Convert text to list
+                    if outcomes_text:
+                        form_data[field] = [o.strip() for o in outcomes_text.replace('\n', ',').split(',') if o.strip()]
+                    else:
+                        form_data[field] = None
+                elif field == 'budget':
+                    form_data[field] = st.selectbox(
+                        "Budget Level",
+                        options=['', 'low', 'medium', 'high'],
+                        help="Available budget for monitoring and evaluation"
+                    )
+                    if form_data[field] == '':
+                        form_data[field] = None
+                elif field == 'capacity':
+                    form_data[field] = st.selectbox(
+                        "Technical Capacity",
+                        options=['', 'basic', 'intermediate', 'advanced'],
+                        help="Technical capacity for data collection and analysis"
+                    )
+                    if form_data[field] == '':
+                        form_data[field] = None
+            
+            # Submit button
+            submitted = st.form_submit_button("Continue", use_container_width=True, type="primary")
+            
+            if submitted:
+                # Update project_info with form data
+                for field, value in form_data.items():
+                    if value is not None and value != '' and value != []:
+                        st.session_state.project_info[field] = value
+                
+                # Check if complete
+                if is_info_complete(st.session_state.project_info):
+                    # Transition to 'retrieve'
+                    st.session_state.workflow_phase = 'retrieve'
+                    st.rerun()
+                else:
+                    # Stay in 'ask' - will show remaining missing fields
+                    st.rerun()
+    else:
+        # All information is complete
+        st.success("✅ All required information has been collected!")
+        
+        # Show summary
+        st.subheader("Project Summary:")
+        for key, value in st.session_state.project_info.items():
+            if key != 'documents_uploaded' and value is not None and value != [] and value != '':
+                st.write(f"**{key.replace('_', ' ').title()}:** {value}")
+        
+        # Button to proceed
+        if st.button("🔎 Find Indicators", use_container_width=True, type="primary"):
+            st.session_state.workflow_phase = 'retrieve'
+            st.rerun()
+
+
+def render_retrieve_phase():
+    """
+    Render retrieve phase UI with error handling and timeout.
+    Requirements: 5.3, 5.5, 8.4
+    """
+    st.header("🔎 Retrieving Indicators")
+    
+    # Show retrieving message
+    with st.spinner("Searching the CBA Knowledge Base for relevant indicators..."):
+        # Build query from project_info
+        project_info = st.session_state.project_info
+        
+        query_parts = []
+        if project_info.get('project_type'):
+            query_parts.append(f"project type: {project_info['project_type']}")
+        if project_info.get('location'):
+            query_parts.append(f"location: {project_info['location']}")
+        if project_info.get('outcomes'):
+            outcomes_str = ', '.join(project_info['outcomes'])
+            query_parts.append(f"outcomes: {outcomes_str}")
+        if project_info.get('budget'):
+            query_parts.append(f"budget: {project_info['budget']}")
+        if project_info.get('capacity'):
+            query_parts.append(f"technical capacity: {project_info['capacity']}")
+        
+        query = "Find relevant sustainability indicators for a circular bioeconomy project with " + "; ".join(query_parts)
+        
+        try:
+            # Call query_knowledge_base() with timeout
+            response = query_knowledge_base(query, timeout=30)
+            
+            # Extract indicators from response
+            # The response structure from retrieve_and_generate includes output text
+            if 'output' in response and 'text' in response['output']:
+                indicators_text = response['output']['text']
+                
+                # Store indicators in session state
+                st.session_state.indicators = [{
+                    'query': query,
+                    'response': indicators_text,
+                    'retrieved_at': datetime.datetime.now()
+                }]
+                
+                st.success("✅ Indicators retrieved successfully!")
+            else:
+                st.warning("⚠️ No indicators found. The Knowledge Base may not have relevant information for your project.")
+                st.info("You can still proceed to ask questions, or go back to adjust your project information.")
+                st.session_state.indicators = []
+        
+        except Exception as e:
+            error_message = str(e)
+            st.error(f"❌ Error retrieving indicators: {error_message}")
+            
+            # Provide helpful guidance based on error type
+            if "timed out" in error_message.lower():
+                st.info("💡 The query took too long. Try simplifying your project description or try again.")
+            elif "not found" in error_message.lower():
+                st.info("💡 Please verify your AWS configuration and Knowledge Base ID.")
+            elif "access denied" in error_message.lower():
+                st.info("💡 Please check your AWS credentials and permissions.")
+            else:
+                st.info("💡 Please try again or contact support if the issue persists.")
+            
+            st.session_state.indicators = []
+            
+            # Offer option to retry or go back
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🔄 Try Again", use_container_width=True):
+                    st.rerun()
+            with col2:
+                if st.button("⬅️ Go Back", use_container_width=True):
+                    st.session_state.workflow_phase = 'ask'
+                    st.rerun()
+            
+            # Don't auto-transition on error - let user decide
+            return
+    
+    # Transition to 'chat' phase only if successful
+    st.session_state.workflow_phase = 'chat'
+    st.rerun()
+
+
+def render_chat_phase():
+    """
+    Render chat phase UI with error handling.
+    Requirements: 6.2, 6.4, 10.5, 8.4
+    """
+    st.header("💬 Indicator Discussion")
+    
+    # Display retrieved indicators
+    if st.session_state.indicators:
+        st.subheader("📊 Recommended Indicators")
+        
+        for idx, indicator_data in enumerate(st.session_state.indicators):
+            with st.expander(f"Indicator Set {idx + 1}", expanded=(idx == 0)):
+                st.write(indicator_data['response'])
+        
+        st.divider()
+    
+    # Show chat input for questions
+    st.subheader("💬 Ask Questions About the Indicators")
+    st.info("""
+    You can now ask questions about:
+    - Specific indicators and their measurement methods
+    - How to apply indicators to your project context
+    - Clarifications about indicator definitions
+    - Additional indicators that might be relevant
+    """)
+    
+    # Display chat messages
+    if 'chat_messages' not in st.session_state:
+        st.session_state.chat_messages = []
+    
+    for message in st.session_state.chat_messages:
         with st.chat_message(message["role"]):
             st.write(message["content"])
-
-    # 6.2 Implement chat input handling (Requirements 1.1, 1.4)
-    # Use st.chat_input for user input
-    # Add messages to current session
-    if prompt := st.chat_input("Share your thoughts on circular bioeconomy, sustainability, or nature-based solutions..."):
-        # Add user message to current session
-        user_message = {"role": "user", "content": prompt}
-        st.session_state.messages.append(user_message)
+    
+    # Chat input
+    if prompt := st.chat_input("Ask a question about the indicators..."):
+        # Add user message
+        st.session_state.chat_messages.append({"role": "user", "content": prompt})
         
-        # Update the session in the sessions dictionary
-        current_session = st.session_state.sessions[st.session_state.current_session_id]
-        current_session["messages"] = st.session_state.messages.copy()
-        
-        # Display user message immediately
+        # Display user message
         with st.chat_message("user"):
             st.write(prompt)
         
-        # Update session title if this is the first message
-        if len(st.session_state.messages) == 1:
-            new_title = generate_session_title(prompt)
-            current_session["title"] = new_title
-        
-        # 6.3 Add LLM response simulation (Requirements 1.2, 3.3)
-        # Create placeholder LLM response function
-        # Use st.write_stream for streaming effect
-        # Include file content in context when available
+        # Get response using query_knowledge_base() for follow-ups
         with st.chat_message("assistant"):
-            # Get file content if available
-            file_content = getattr(st.session_state, 'file_content', None)
+            with st.spinner("Thinking..."):
+                try:
+                    # Use query_knowledge_base() for follow-up questions with timeout
+                    response = query_knowledge_base(prompt, timeout=30)
+                    
+                    if 'output' in response and 'text' in response['output']:
+                        response_text = response['output']['text']
+                    else:
+                        response_text = "I couldn't find relevant information in the Knowledge Base. Please try rephrasing your question."
+                    
+                    st.write(response_text)
+                    
+                    # Add assistant response
+                    st.session_state.chat_messages.append({"role": "assistant", "content": response_text})
+                
+                except Exception as e:
+                    error_message = str(e)
+                    
+                    # Provide user-friendly error messages
+                    if "timed out" in error_message.lower():
+                        error_msg = "⏱️ The query took too long. Please try a simpler question."
+                    elif "not found" in error_message.lower():
+                        error_msg = "❌ Knowledge Base connection issue. Please check your configuration."
+                    elif "access denied" in error_message.lower():
+                        error_msg = "🔒 Access denied. Please check your AWS credentials."
+                    elif "throttl" in error_message.lower():
+                        error_msg = "⏸️ Too many requests. Please wait a moment and try again."
+                    else:
+                        error_msg = f"❌ Error: {error_message}"
+                    
+                    st.error(error_msg)
+                    st.session_state.chat_messages.append({"role": "assistant", "content": error_msg})
+    
+    # Show export button
+    st.divider()
+    col1, col2 = st.columns([3, 1])
+    
+    with col2:
+        if st.button("📥 Export Summary", use_container_width=True, type="primary"):
+            try:
+                # Create export summary
+                export_text = "# CBA Indicator Selection Summary\n\n"
+                export_text += "## Project Information\n\n"
+                
+                for key, value in st.session_state.project_info.items():
+                    if key != 'documents_uploaded' and value is not None and value != [] and value != '':
+                        export_text += f"**{key.replace('_', ' ').title()}:** {value}\n\n"
+                
+                export_text += "\n## Recommended Indicators\n\n"
+                for idx, indicator_data in enumerate(st.session_state.indicators):
+                    export_text += f"### Indicator Set {idx + 1}\n\n"
+                    export_text += indicator_data['response'] + "\n\n"
+                
+                if st.session_state.chat_messages:
+                    export_text += "\n## Discussion Summary\n\n"
+                    for msg in st.session_state.chat_messages:
+                        role = "User" if msg["role"] == "user" else "Assistant"
+                        export_text += f"**{role}:** {msg['content']}\n\n"
+                
+                # Offer download
+                st.download_button(
+                    label="Download Summary",
+                    data=export_text,
+                    file_name=f"cba_indicator_summary_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                    mime="text/markdown"
+                )
             
-            # Generate and stream the response from the Strands agent
-            response_generator = get_agent_response(prompt, file_content)
-            response = st.write_stream(response_generator)
-            
-            # Add assistant response to session
-            assistant_message = {"role": "assistant", "content": response}
-            st.session_state.messages.append(assistant_message)
-            
-            # Update the session in the sessions dictionary
-            current_session["messages"] = st.session_state.messages.copy()
+            except Exception as e:
+                st.error(f"❌ Error creating export: {str(e)}")
+                st.info("Please try again or contact support if the issue persists.")
 
 if __name__ == "__main__":
     main()

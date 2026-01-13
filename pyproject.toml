@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.12"
 dependencies = [
+    "boto3>=1.35.0",
     "openpyxl>=3.1.0",
     "pypdf>=4.0.0",
     "strands-agents>=1.21.0",

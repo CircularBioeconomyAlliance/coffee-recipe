@@ -8,7 +8,7 @@ import openpyxl
 from pypdf import PdfReader
 from strands import Agent
 from strands.models import BedrockModel
-from strands_tools import current_time, file_write, http_request, memory, use_llm
+from strands_tools import current_time, file_write, http_request, use_llm
 
 
 def extract_pdf_text(pdf_path: str) -> str:
@@ -68,7 +68,6 @@ def main():
         model=bedrock_model,
         system_prompt=SYSTEM_PROMPT,
         tools=[
-            memory,
             use_llm,
             http_request,
             file_write,
