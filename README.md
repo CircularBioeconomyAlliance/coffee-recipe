@@ -24,10 +24,17 @@ uv sync
 ```
 
 3. Configure AWS credentials:
-```bash
-export AWS_DEFAULT_REGION=us-west-2
-# Ensure AWS credentials are configured (via ~/.aws/credentials, environment variables, or IAM role)
-```
+
+   To run the application locally, you will need to set the following credentials in your terminal session:
+
+   ```
+   AWS_DEFAULT_REGION=us-west-2
+   AWS_ACCESS_KEY_ID=<your-access-key>
+   AWS_SECRET_ACCESS_KEY=<your-secret-key>
+   AWS_SESSION_TOKEN=<your-session-token>
+   ```
+
+   AWS credentials can be obtained from [Workshop Studio](https://catalog.workshops.aws/).
 
 ## Running the Application
 
@@ -81,4 +88,7 @@ uv run python tests/test_chat_app.py
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `AWS_DEFAULT_REGION` | AWS region for Bedrock | `us-west-2` |
+| `AWS_ACCESS_KEY_ID` | AWS access key | Required |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key | Required |
+| `AWS_SESSION_TOKEN` | AWS session token | Required |
 | `STRANDS_KNOWLEDGE_BASE_ID` | Bedrock Knowledge Base ID | Set in code |
