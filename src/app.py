@@ -17,11 +17,9 @@ sys.path.insert(0, str(Path(__file__).parent))
 from strands import Agent
 from strands_tools import memory, use_llm
 
-# Import prompts
-try:
-    from prompts import SYSTEM_PROMPT
-except ImportError:
-    from src.prompts.system import SYSTEM_PROMPT
+# Load system prompt from text file (relative to this file in src/)
+PROMPT_PATH = Path(__file__).parent / "prompts" / "system.txt"
+SYSTEM_PROMPT = PROMPT_PATH.read_text()
 
 # Configuration
 MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
