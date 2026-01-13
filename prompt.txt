@@ -1,0 +1,103 @@
+// Use this to clearly define the task and job needed by the model
+task_summary = f"""
+## Task Summary:
+Indicator Discovery & Selection
+
+Purpose
+This tool identifies and recommends the most appropriate indicator(s) to track progress toward a project’s expected outcomes, using the information stored in the Knowledge Base (KB). The selection is guided by existing use cases and optimized to balance accuracy, ease of use, and cost.
+
+⸻
+
+Scope of the Knowledge Base (KB)
+
+The Knowledge Base contains structured information on:
+	1.	Indicators
+	•	Indicator definitions and intended use
+	•	Underlying methods
+	•	Attributes including:
+	•	Accuracy
+	•	Ease of use
+	•	Cost
+	•	Mappings to principles and criteria
+	2.	Methods
+	•	Methodological descriptions underlying indicators
+	•	Links to scientific publications, i.e., one or more Digital Object Identifiers (DOIs) per method
+	3.	Use Cases
+	•	Example project descriptions
+	•	Expected outcomes for those projects
+	•	A curated example of “good” indicator sets used to track progress toward those outcomes
+
+⸻
+
+Task Description
+
+Given a new project description and its expected outcomes, the tool shall:
+	1.	Identify Relevant Use Cases
+	•	Search the KB for the most relevant existing use case(s) based on similarity in:
+	•	Project objectives
+	•	Expected outcomes
+	•	Intervention type or thematic focus
+	2.	Infer Suitable Indicators
+	•	Extract indicators used in the selected use case(s) as reference examples.
+	•	Identify additional indicators in the KB that are relevant to the project’s expected outcomes.
+	3.	Apply Principle & Criteria Mapping
+	•	Indicators in the KB are mapped to Principles (1–7) and Criteria (e.g. 1.1, 1.2 … 7.4).
+	•	Mapping strength is encoded as:
+	•	P (Primary): Indicator is highly relevant and directly addresses the criterion.
+	•	S (Secondary): Indicator supports the criterion but is not the main measure.
+	•	x: Indicator is related and applicable, but at a lower degree.
+	•	Prioritize indicators with Primary (P) mappings to the most relevant criteria, followed by Secondary (S), and then x mappings where appropriate.
+	4.	Optimize Indicator Selection
+	•	Evaluate candidate indicators based on:
+	•	Higher accuracy
+	•	Higher ease of use
+	•	Lower cost
+	•	Balance trade-offs where no single indicator is optimal across all attributes.
+	•	Prefer a concise, complementary set of indicators, e.g., covering all Principles.
+    •	Consider the project budget and ambition when selecting indicators.
+	5.	Provide Supporting Evidence
+	•	For each recommended indicator, reference its underlying method(s).
+	•	Methods include links to scientific publications via one or more DOIs.
+	•	Note that:
+	•	In many cases, the full publication is openly available via the DOI landing page.
+	•	In some cases, only the abstract may be accessible.
+
+⸻
+
+Expected Output
+
+The tool should return:
+	•	A ranked list of recommended indicator(s) suitable for tracking progress toward the project’s expected outcomes
+	•	For each indicator:
+	•	Brief justification of relevance
+	•	Principle(s) and criterion/criteria mapping
+	•	Summary of accuracy, ease of use, and cost considerations
+	•	References to supporting methods and associated DOI(s)
+"""
+
+// Use this to provide contextual information related to the task
+context_information = f"""
+## Context Information:
+- {{Context and content information 1}}
+- {{Context and content information 2}}
+...
+"""
+
+// Use this to provide any model instructions that you want model to adhere to
+model_instructions = f"""
+## Model Instructions:
+- {{ Other Model Instructions }}
+...
+"""
+
+// Use this to provide response style and formatting guidance
+response_style  = f"""
+## Response style and format requirements:
+- {{Style and format requirement 1}}
+- {{Style and format requirement 2}}
+...
+"""
+final_prompt = f{task_summary}
+{context_information}
+{model_instructions}
+response_style
