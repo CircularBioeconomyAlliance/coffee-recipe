@@ -1,7 +1,7 @@
 [project]
 name = "coffee-recipe"
 version = "0.1.0"
-description = "Add your description here"
+description = "CBA Indicator Selection Assistant - Bedrock AgentCore Runtime"
 requires-python = ">=3.12"
 dependencies = [
     "openpyxl>=3.1.0",
@@ -9,4 +9,7 @@ dependencies = [
     "strands-agents>=1.21.0",
     "strands-agents-tools>=0.2.19",
     "streamlit>=1.40.0",
+    "bedrock-agentcore>=0.1.0",
+    "bedrock-agentcore-starter-toolkit>=0.2.6",
+    "pyyaml>=6.0.3",
 ]

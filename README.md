@@ -57,6 +57,14 @@ uv run src/agent.py
 
 Interactive command-line chat. Type your messages and press Enter. Type `exit` to quit.
 
+### Bedrock AgentCore Runtime
+
+```bash
+uv run src/bedrock_agent.py
+```
+
+Runs the agent as an HTTP service on port 8080, compatible with Amazon Bedrock AgentCore Runtime. See `.kiro/steering/deployment.md` for full deployment instructions.
+
 ## Project Structure
 
 ```

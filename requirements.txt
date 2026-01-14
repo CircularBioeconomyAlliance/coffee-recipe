@@ -1,0 +1,5 @@
+strands-agents>=1.21.0
+strands-agents-tools>=0.2.19
+bedrock-agentcore
+openpyxl>=3.1.0
+pypdf>=4.0.0
