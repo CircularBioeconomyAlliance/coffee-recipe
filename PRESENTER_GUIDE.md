@@ -1,108 +1,120 @@
-# CBA Indicator Assistant - 45 Second Pitch
+# CBA Indicator Assistant - Presenter Guide
 
-> **One-liner:** An AI assistant that helps sustainability projects pick the right monitoring indicators from a library of 800+ methods.
-
----
-
-## 🎯 The Problem (10 sec)
-
-"Circular bioeconomy projects need to track their impact, but choosing from **800+ measurement methods** is overwhelming. Projects often pick wrong indicators, wasting time and budget."
+> **Use this guide to present the "How It Works" slide**
 
 ---
 
-## 💡 The Solution (15 sec)
+## 🎤 Talking Points (30-45 seconds)
 
-"We built an **AI chatbot** that asks about your project — location, crop, budget, goals — then searches our knowledge base to recommend the **perfect indicators** for your specific situation."
+### 1. Two Entry Points (10 sec)
+"Users can start two ways: **chat directly** with the AI, or **upload a project PDF**. The upload option extracts information automatically so the AI only asks for what's missing."
+
+### 2. The Flow (15 sec)
+"Either way, we collect four things: **location, commodity, budget, and outcomes**. The agent then searches our **Knowledge Base of 800+ methods** and returns tailored indicator recommendations."
+
+### 3. Tech Stack (10 sec)
+"It's built on **AWS Bedrock** with Claude Sonnet, using **AgentCore** for the agent runtime and a **Next.js frontend**. Fully serverless."
+
+---
+
+## 📊 Architecture Diagram
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   👤 User   │ ──► │  🤖 AI Chat │ ──► │ 📚 Search   │ ──► │ ✅ Results  │
-│  "I grow    │     │  Asks about │     │  801 methods│     │  Top 5      │
-│   coffee    │     │  location,  │     │  224 indica-│     │  indicators │
-│   in Brazil"│     │  budget...  │     │  tors in KB │     │  for YOU    │
-└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
-```
-
----
-
-## 🔧 How It Works (15 sec)
-
-| Step | What Happens |
-|------|-------------|
-| **1. Chat** | User describes their project in plain English |
-| **2. Profile** | AI collects: location, commodity, budget, outcomes |
-| **3. Search** | Queries AWS Bedrock Knowledge Base with 800+ methods |
-| **4. Recommend** | Returns tailored indicators with methods & costs |
-
----
-
-## ☁️ Tech Stack (5 sec)
-
-- **Frontend:** Next.js
-- **AI:** Claude Sonnet 4.5 via AWS Bedrock
-- **Knowledge Base:** 801 methods, 224 indicators (CBA M&E Framework)
-- **Infrastructure:** Bedrock AgentCore + Lambda + API Gateway
-
----
-
-## 🎬 Demo Script
-
-> **Say this while showing the chat interface:**
-
-1. "Here's a coffee farmer in Brazil with a $10K budget"
-2. "The AI asks what they want to measure — let's say 'soil health'"
-3. "It searches our knowledge base and recommends 5 specific indicators"
-4. "Each recommendation includes the method, cost, and why it fits their project"
-
----
-
-## 📊 Architecture
-
-```
-   USER                    AWS CLOUD                     DATA
-    │                         │                           │
-    ▼                         ▼                           ▼
-┌────────┐              ┌──────────┐              ┌────────────┐
-│ Next.js│    ──────►   │  Lambda  │    ──────►   │ Knowledge  │
-│Frontend│              │    +     │              │    Base    │
-│        │   ◄──────    │AgentCore │   ◄──────    │(801 methods)│
-└────────┘              └──────────┘              └────────────┘
-                              │
-                              ▼
-                        ┌──────────┐
-                        │  Claude  │
-                        │ (Bedrock)│
-                        └──────────┘
+                            ┌─────────────────────────────────────────────────────────┐
+                            │                      AWS CLOUD                          │
+                            │                                                         │
+   ┌──────────┐             │   ┌───────────┐    ┌─────────────┐    ┌─────────────┐  │
+   │  Next.js │  ─── /chat ───► │   API     │───►│   Lambda    │───►│  AgentCore  │  │
+   │ Frontend │             │   │  Gateway  │    │             │    │  (Strands)  │  │
+   └──────────┘             │   └───────────┘    └──────┬──────┘    └──────┬──────┘  │
+        │                   │                          │                   │         │
+        │                   │                          │                   │         │
+        │ /upload           │                          ▼                   ▼         │
+        │                   │                    ┌──────────┐       ┌─────────────┐  │
+        └───────────────────┼──────────────────►│    S3    │       │  Knowledge  │  │
+                            │                    │  Bucket  │       │    Base     │  │
+                            │                    └──────────┘       │(801 methods)│  │
+                            │                                       └─────────────┘  │
+                            │                          │                   ▲         │
+                            │                          ▼                   │         │
+                            │                    ┌──────────┐              │         │
+                            │                    │  Claude  │──────────────┘         │
+                            │                    │ (Bedrock)│                         │
+                            │                    └──────────┘                         │
+                            └─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🏆 Key Benefits
+## 🔄 Request Flows
 
-| For Users | For CBA |
-|-----------|---------|
-| ✅ No expertise needed | ✅ Scalable advice |
-| ✅ Budget-aware recommendations | ✅ Consistent methodology |
-| ✅ Location-specific indicators | ✅ Knowledge base grows over time |
+### Flow A: Chat
+```
+User types message
+       │
+       ▼
+POST /chat → Lambda → AgentCore → Claude + KB Search → Response
+```
+
+### Flow B: Document Upload
+```
+User uploads PDF
+       │
+       ▼
+POST /upload → Lambda → S3 (store) → Claude (extract profile) → Return {location, commodity, budget}
+       │
+       ▼
+Frontend pre-fills chat → Agent asks for missing info (e.g., outcomes) → KB Search → Response
+```
 
 ---
 
-## 💬 Elevator Pitch (Copy-Paste)
+## 🧩 Tech Stack
 
-> "We built an AI assistant for the Circular Bioeconomy Alliance that helps sustainability projects choose the right monitoring indicators. Instead of manually searching through 800 measurement methods, users just chat with an AI about their project — where it is, what they're growing, their budget — and get personalized recommendations in seconds. It's powered by AWS Bedrock and our curated knowledge base of CBA indicators."
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Frontend** | Next.js | Chat UI, file upload |
+| **API** | API Gateway | HTTP routing |
+| **Compute** | Lambda | Request handling |
+| **Agent** | Bedrock AgentCore + Strands | Conversation + tool orchestration |
+| **LLM** | Claude Sonnet 4.5 | Reasoning, extraction, responses |
+| **Data** | Bedrock Knowledge Base | 801 methods, 224 indicators |
+| **Storage** | S3 | Uploaded PDFs |
+| **Auth** | Cognito | Gateway authentication |
 
 ---
 
-## ❓ Anticipated Questions
+## 🔧 What the Agent Collects
 
-**Q: Where does the data come from?**
-> A: The CBA M&E Framework — a curated library of 801 methods and 224 indicators developed by sustainability experts.
+| Field | Required | Source |
+|-------|----------|--------|
+| 📍 Location | Yes | PDF or chat |
+| 🌾 Commodity | Yes | PDF or chat |
+| 💰 Budget | Yes | PDF or chat |
+| 🎯 Outcomes | Yes | Usually chat (rarely in PDFs) |
+| ⚙️ Technical Capacity | Optional | Chat |
 
-**Q: How accurate is it?**
-> A: The AI only recommends indicators from our verified knowledge base. It never makes things up.
+---
 
-**Q: Can it handle different crops/regions?**
-> A: Yes! It's designed for global use — coffee in Brazil, cotton in Chad, etc.
+## 🛠️ Agent Tools
 
-**Q: What's the cost?**
-> A: Runs on AWS serverless (Lambda + Bedrock), so you only pay for what you use.
+| Tool | What It Does |
+|------|--------------|
+| `search_cba_indicators(query)` | General KB search |
+| `search_indicators_by_outcome(outcome)` | Find indicators for goals |
+| `search_methods_by_budget(budget)` | Filter by cost |
+| `search_location_specific_indicators(location)` | Regional relevance |
+| `set_project_*` | Store profile fields |
+
+---
+
+## ❓ If Asked...
+
+**"How does the PDF extraction work?"**
+> Document is uploaded to S3, then Claude extracts location, commodity, and budget. The agent identifies what's missing and asks follow-up questions.
+
+**"What's in the Knowledge Base?"**
+> 801 measurement methods and 224 indicators from the CBA M&E Framework — curated by sustainability experts.
+
+**"Is it serverless?"**
+> Yes — Lambda, AgentCore, and Bedrock. Pay only for what you use.
