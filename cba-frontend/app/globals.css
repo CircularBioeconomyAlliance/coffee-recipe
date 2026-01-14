@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-cba-navy text-white;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-cba-gold to-cba-gold-light bg-clip-text text-transparent;
+  }
+  
+  .card-glow {
+    box-shadow: 0 0 20px rgba(251, 173, 23, 0.1);
+  }
+  
+  .card-glow-hover:hover {
+    box-shadow: 0 0 30px rgba(251, 173, 23, 0.2);
+  }
+}

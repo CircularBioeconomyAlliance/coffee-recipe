@@ -8,4 +8,5 @@ dependencies = [
     "pypdf>=4.0.0",
     "strands-agents>=1.21.0",
     "strands-agents-tools>=0.2.19",
+    "streamlit>=1.40.0",
 ]

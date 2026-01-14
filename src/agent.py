@@ -2,7 +2,6 @@
 """Simple Strands chatbot with Bedrock knowledge base support."""
 
 import argparse
-import os
 from pathlib import Path
 
 import openpyxl
@@ -46,16 +45,8 @@ def extract_file_text(file_path: Path) -> str:
         raise ValueError(f"Unsupported file type: {suffix}. Use .pdf or .xlsx")
 
 
-MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-KNOWLEDGE_BASE_ID = "CXRV29T1AF"
-
-# Set AWS region and knowledge base ID
-os.environ["AWS_DEFAULT_REGION"] = "us-west-2"
-os.environ["STRANDS_KNOWLEDGE_BASE_ID"] = KNOWLEDGE_BASE_ID
-
-# Load system prompt from text file
-PROMPTS_DIR = Path(__file__).parent / "prompts"
-SYSTEM_PROMPT = (PROMPTS_DIR / "system.txt").read_text()
+# Import shared configuration
+from config import MODEL_ID, KNOWLEDGE_BASE_ID, SYSTEM_PROMPT
 
 
 def main():
