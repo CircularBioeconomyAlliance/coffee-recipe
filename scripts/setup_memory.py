@@ -114,4 +114,3 @@ if __name__ == "__main__":
     input()
 
     create_memory_resource(region_name=region)
-    create_memory_resource(region_name=region)

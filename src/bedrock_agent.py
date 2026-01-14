@@ -13,12 +13,14 @@ _src_dir = Path(__file__).parent
 if str(_src_dir) not in sys.path:
     sys.path.insert(0, str(_src_dir))
 
+# Now import strands_tools AFTER env vars are set
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from strands import Agent
 from strands.models import BedrockModel
 from strands_tools import current_time, file_write, http_request, memory, use_llm
 
-# Import shared configuration
+# IMPORTANT: Import config FIRST to set environment variables before strands_tools
+# The memory tool may read STRANDS_KNOWLEDGE_BASE_ID at import time
 from config import (
     AGENTCORE_MEMORY_ID,
     AWS_REGION,

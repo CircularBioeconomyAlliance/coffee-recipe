@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
-"""Invoke the deployed CBA agent on Bedrock AgentCore Runtime."""
+"""
+Invoke the deployed CBA Indicator Assistant agent on Bedrock AgentCore Runtime.
+
+This script demonstrates:
+- Multi-turn conversations with session persistence
+- AgentCore Memory integration (STM + LTM)
+- How the agent remembers context across requests
+
+Desired Outcomes:
+- Agent retrieves relevant indicators from Knowledge Base
+- Agent remembers user preferences (budget, technical capacity)
+- Agent provides contextual recommendations based on project details
+- Session continuity enables natural multi-turn conversations
+"""
 
 import json
 import sys
@@ -108,11 +121,7 @@ def invoke_agent(
         response_data = json.loads(response_body)
 
         result = response_data.get("result", "No result")
-        print(f"Response: {result[:200]}...")
-        if len(result) > 200:
-            print("[Response truncated for display]\n")
-        else:
-            print()
+        print(f"\nAgent Response:\n{result}\n")
 
         return response_data, runtime_session_id, session_id, actor_id
 
@@ -132,12 +141,27 @@ def run_multi_turn_conversation(agent_arn, region):
     - runtime_session_id: AgentCore Runtime microVM isolation (keeps environment alive)
     - session_id: Agent's AgentCore Memory session (conversation history)
     - actor_id: User identifier for cross-session long-term memory
+
+    Desired Outcomes:
+    - Turn 1: Agent asks clarifying questions about project type/location
+    - Turn 2: Agent acknowledges cotton project in Chad, asks about constraints
+    - Turn 3: Agent notes budget/capacity constraints, may start searching KB
+    - Turn 4: Agent provides specific indicator recommendations from KB,
+              tailored to the cotton/Chad/low-budget context
     """
     print("\n" + "=" * 70)
     print("MULTI-TURN CONVERSATION DEMO")
     print("=" * 70)
     print("\nThis demonstrates session management with AgentCore Memory.")
-    print("The agent will remember context across multiple requests.\n")
+    print("The agent will remember context across multiple requests.")
+    print("\n📋 DESIRED OUTCOMES:")
+    print("   • Agent should ask clarifying questions initially")
+    print("   • Agent should remember project details across turns")
+    print("   • Agent should search Knowledge Base for relevant indicators")
+    print("   • Final response should include specific indicator recommendations")
+    print(
+        "   • Recommendations should match constraints (low budget, basic capacity)\n"
+    )
 
     # Generate session identifiers for this conversation
     # All three IDs are reused across all turns to maintain context
@@ -154,7 +178,7 @@ def run_multi_turn_conversation(agent_arn, region):
     conversation = [
         "I need help selecting indicators for a project.",
         "It's a cotton farming project in Chad.",
-        "We have a low budget and basic technical capacity.",
+        "We have a low budget and basic technical capacity, but want to improve the soil quality and stop erosion.",
         "What indicators would you recommend?",
     ]
 
@@ -174,18 +198,25 @@ def run_multi_turn_conversation(agent_arn, region):
     print("\n" + "=" * 70)
     print("CONVERSATION COMPLETE")
     print("=" * 70)
-    print("\nSession IDs used throughout conversation:")
-    print(f"  Runtime: {runtime_session_id}")
-    print(f"  Memory:  {session_id}")
-    print(f"  Actor:   {actor_id}")
-    print("\nNotice how the agent:")
-    print("• Remembered the project type (cotton farming)")
-    print("• Remembered the location (Chad)")
-    print("• Remembered the constraints (low budget, basic capacity)")
-    print("• Provided contextual recommendations in the final turn")
-    print("\nThis is powered by:")
-    print("  1. AgentCore Runtime sessions (microVM context)")
-    print("  2. AgentCore Memory (STM + LTM strategies)")
+    print("\n📊 SESSION SUMMARY:")
+    print(f"  Runtime Session: {runtime_session_id}")
+    print(f"  Memory Session:  {session_id}")
+    print(f"  Actor ID:        {actor_id}")
+    print("\n✅ VALIDATION CHECKLIST:")
+    print("   Did the agent...")
+    print("   [ ] Remember the project type (cotton farming)?")
+    print("   [ ] Remember the location (Chad)?")
+    print("   [ ] Remember the constraints (low budget, basic capacity)?")
+    print("   [ ] Search the Knowledge Base for indicators?")
+    print("   [ ] Provide specific indicator IDs and methods?")
+    print("   [ ] Tailor recommendations to the stated constraints?")
+    print("\n🔧 MEMORY ARCHITECTURE POWERING THIS:")
+    print("   • STM: Conversation history within this session")
+    print("   • LTM Summaries: Will be generated at session end")
+    print("   • LTM Preferences: Budget/capacity preferences stored for future")
+    print("   • LTM Facts: Project location/type stored for future sessions")
+    print("\n💡 TIP: Run this demo again with the same actor_id to see")
+    print("   how LTM remembers your preferences across sessions!")
     print("=" * 70)
 
 
@@ -193,12 +224,24 @@ def run_interactive_session(agent_arn, region):
     """
     Run an interactive chat session with the agent.
     Type 'quit' or 'exit' to end the session.
+
+    Desired Outcomes:
+    - Natural multi-turn conversation flow
+    - Agent remembers context from earlier in the conversation
+    - Agent searches Knowledge Base when asked about indicators
+    - Responses are tailored to user's stated preferences
     """
     print("\n" + "=" * 70)
     print("INTERACTIVE CHAT SESSION")
     print("=" * 70)
     print("\nYou can have a multi-turn conversation with the agent.")
-    print("Type 'quit' or 'exit' to end the session.\n")
+    print("The agent will remember everything you say in this session.")
+    print("\n📋 SUGGESTED CONVERSATION FLOW:")
+    print("   1. Start with: 'I need help selecting indicators'")
+    print("   2. Describe your project type and location")
+    print("   3. Mention your budget and technical capacity")
+    print("   4. Ask for specific indicator recommendations")
+    print("\nType 'quit' or 'exit' to end the session.\n")
 
     # Generate session identifiers
     runtime_session_id = str(uuid.uuid4()) + "-interactive"
@@ -242,16 +285,18 @@ if __name__ == "__main__":
     AGENT_ARN, REGION = load_agent_config()
 
     print("=" * 70)
-    print("CBA Agent Invocation Test with Session Management")
+    print("CBA INDICATOR ASSISTANT - Agent Invocation Test")
     print("=" * 70)
-    print(f"\n✓ Loaded agent ARN: {AGENT_ARN}")
-    print(f"✓ Region: {REGION}\n")
+    print(f"\n✓ Agent ARN: {AGENT_ARN}")
+    print(f"✓ Region: {REGION}")
+    print("\n📎 This agent helps select CBA indicators from a Knowledge Base.")
+    print("   It uses AgentCore Memory for session continuity and learning.\n")
 
     # Prompt user for demo choice
     print("Choose a test mode:")
-    print("1. Multi-turn conversation demo (scripted)")
-    print("2. Interactive chat session")
-    print("3. Single prompt test")
+    print("1. Multi-turn conversation demo (scripted) - See memory in action")
+    print("2. Interactive chat session - Free-form conversation")
+    print("3. Single prompt test - Quick one-shot query")
     print("\nEnter choice (1, 2, or 3, default: 1):")
     choice = input("> ").strip()
 
@@ -262,12 +307,15 @@ if __name__ == "__main__":
     elif choice == "3":
         # Single prompt mode
         EXAMPLE_PROMPTS = [
-            "What are the key principles of circular bioeconomy?",
-            "How can regenerative agriculture contribute to sustainability?",
-            "What indicators should I use for a cotton farming project in Chad?",
+            "What indicators should I use for a cotton farming project in Chad with low budget?",
+            "Recommend soil health indicators for smallholder farmers in sub-Saharan Africa",
+            "What are the best methods to measure carbon sequestration in agroforestry systems?",
         ]
 
-        print("\nExample prompts:")
+        print("\n📋 DESIRED OUTCOME:")
+        print("   Agent should search the Knowledge Base and return specific")
+        print("   indicator recommendations with IDs, methods, and rationale.\n")
+        print("Example prompts:")
         for i, prompt in enumerate(EXAMPLE_PROMPTS, 1):
             print(f"{i}. {prompt}")
 
