@@ -116,6 +116,270 @@ flowchart TB
 | **`lambda_function.py`** | AWS Lambda handler routing `/chat` and `/upload` requests |
 | **`agentcore-cba/`** | Bedrock AgentCore deployment with KB search tools |
 
+---
+
+## Bedrock AgentCore Infrastructure (CDK)
+
+The production agent runs on **AWS Bedrock AgentCore**, deployed via CDK. Here's the complete infrastructure:
+
+```mermaid
+flowchart TB
+    subgraph CDK["📦 CDK Deployment (cdk/bin/cdk.ts)"]
+        direction TB
+        DockerStack["DockerImageStack"]
+        AgentCoreStack["AgentCoreStack"]
+        DockerStack -->|"imageUri"| AgentCoreStack
+    end
+
+    subgraph ECR["Amazon ECR"]
+        DockerImage["Docker Image<br/>(Python 3.12 + Strands Agent)"]
+    end
+
+    subgraph AgentCoreInfra["Bedrock AgentCore Infrastructure"]
+        Runtime["AgentCore Runtime<br/>(cbaindicatoragent_Agent)"]
+        Gateway["AgentCore Gateway<br/>(MCP Protocol)"]
+        ACMemory["AgentCore Memory<br/>(30-day event expiry)"]
+        
+        subgraph Endpoints["Runtime Endpoints"]
+            DEFAULT["DEFAULT"]
+            PROD["PROD (v1)"]
+            DEV["DEV (v1)"]
+        end
+    end
+
+    subgraph Auth["🔐 Cognito Authentication"]
+        UserPool["Cognito User Pool"]
+        ResourceServer["Resource Server<br/>(basic scope)"]
+        AppClient["App Client<br/>(client_credentials flow)"]
+        Domain["Cognito Domain<br/>(cbaindicatoragent-{region})"]
+    end
+
+    subgraph MCPLayer["MCP Gateway Target"]
+        MCPLambda["MCP Lambda<br/>(placeholder_tool)"]
+    end
+
+    subgraph IAM["IAM Roles"]
+        RuntimeRole["Runtime Role<br/>(ECR, Logs, Bedrock, X-Ray)"]
+        GatewayRole["Gateway Role<br/>(Lambda invoke)"]
+    end
+
+    %% CDK creates resources
+    DockerStack -->|"builds"| DockerImage
+    AgentCoreStack -->|"creates"| Runtime
+    AgentCoreStack -->|"creates"| Gateway
+    AgentCoreStack -->|"creates"| ACMemory
+    AgentCoreStack -->|"creates"| UserPool
+    AgentCoreStack -->|"creates"| MCPLambda
+
+    %% Runtime configuration
+    DockerImage -->|"containerUri"| Runtime
+    RuntimeRole -->|"roleArn"| Runtime
+    Runtime --> Endpoints
+
+    %% Gateway configuration
+    Gateway -->|"targetConfiguration"| MCPLambda
+    GatewayRole -->|"roleArn"| Gateway
+    UserPool -->|"JWT auth"| Gateway
+
+    %% Auth flow
+    UserPool --> ResourceServer
+    ResourceServer --> AppClient
+    AppClient --> Domain
+
+    %% Environment variables passed to Runtime
+    Runtime -.->|"GATEWAY_URL"| Gateway
+    Runtime -.->|"MEMORY_ID"| ACMemory
+    Runtime -.->|"COGNITO_*"| AppClient
+
+    classDef cdk fill:#7B68EE,stroke:#483D8B,color:#fff
+    classDef ecr fill:#FF9900,stroke:#232F3E,color:#232F3E
+    classDef agentcore fill:#01A88D,stroke:#006644,color:#fff
+    classDef auth fill:#DD344C,stroke:#8B0000,color:#fff
+    classDef iam fill:#3F8624,stroke:#2E5A1C,color:#fff
+
+    class DockerStack,AgentCoreStack cdk
+    class DockerImage ecr
+    class Runtime,Gateway,ACMemory,DEFAULT,PROD,DEV agentcore
+    class UserPool,ResourceServer,AppClient,Domain auth
+    class RuntimeRole,GatewayRole iam
+```
+
+### CDK Stack Components
+
+| Resource | Type | Purpose |
+|----------|------|---------|
+| **DockerImageStack** | `ecr_assets.DockerImageAsset` | Builds and pushes agent Docker image to ECR |
+| **AgentCore Runtime** | `bedrockagentcore.CfnRuntime` | Runs the containerized Strands agent |
+| **AgentCore Gateway** | `bedrockagentcore.CfnGateway` | MCP protocol gateway for external tools |
+| **AgentCore Memory** | `bedrockagentcore.CfnMemory` | Persistent memory with 30-day event expiry |
+| **Cognito User Pool** | `cognito.UserPool` | JWT authentication for Gateway |
+| **MCP Lambda** | `lambda.Function` | Placeholder tool for Gateway demonstration |
+
+---
+
+## End-to-End Data Flow
+
+This diagram shows the complete request lifecycle from user input to response:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as 👤 User
+    participant NextJS as Next.js Frontend
+    participant APIGW as API Gateway
+    participant Lambda as Lambda Function
+    participant AgentCore as AgentCore Runtime
+    participant Strands as Strands Agent
+    participant Bedrock as Bedrock (Claude)
+    participant KB as Knowledge Base
+    participant S3 as S3 Bucket
+
+    Note over User,S3: === Chat Flow ===
+    
+    User->>NextJS: Enter message + project profile
+    NextJS->>APIGW: POST /chat {message, session_id, profile}
+    APIGW->>Lambda: Invoke lambda_handler()
+    Lambda->>Lambda: Route to handle_chat()
+    
+    Lambda->>AgentCore: invoke_agent_runtime()<br/>ARN: cbaindicatoragent_Agent
+    
+    AgentCore->>Strands: Execute agent with prompt
+    
+    Note over Strands,KB: Agent Tool Loop
+    
+    Strands->>Strands: Parse user intent
+    Strands->>Bedrock: LLM call (Claude Sonnet 4.5)
+    Bedrock-->>Strands: Determine tools to call
+    
+    alt Profile Collection
+        Strands->>Strands: set_project_location()
+        Strands->>Strands: set_project_commodity()
+        Strands->>Strands: set_project_budget()
+        Strands->>Strands: set_project_outcomes()
+    end
+    
+    alt Knowledge Base Search
+        Strands->>KB: search_cba_indicators(query)
+        KB-->>Strands: Indicator results (relevance scored)
+        Strands->>KB: search_indicators_by_outcome(outcome)
+        KB-->>Strands: Outcome-aligned indicators
+        Strands->>KB: search_methods_by_budget(budget)
+        KB-->>Strands: Budget-appropriate methods
+    end
+    
+    Strands->>Bedrock: Generate final response
+    Bedrock-->>Strands: Formatted recommendations
+    
+    Strands-->>AgentCore: Stream response chunks
+    AgentCore-->>Lambda: SSE data events
+    Lambda->>Lambda: Parse & clean response
+    Lambda-->>APIGW: {response, session_id}
+    APIGW-->>NextJS: JSON response
+    NextJS-->>User: Display recommendations
+
+    Note over User,S3: === Upload Flow ===
+    
+    User->>NextJS: Upload PDF file
+    NextJS->>APIGW: POST /upload (FormData)
+    APIGW->>Lambda: Invoke lambda_handler()
+    Lambda->>Lambda: Route to handle_upload()
+    Lambda->>S3: put_object() - store file
+    S3-->>Lambda: s3://cba-indicator-uploads/...
+    Lambda->>Bedrock: invoke_model() - extract profile
+    Bedrock-->>Lambda: {location, commodity, budget}
+    Lambda-->>APIGW: {found: {...}, missing: [...]}
+    APIGW-->>NextJS: Extracted profile data
+    NextJS-->>User: Pre-fill chat with profile
+```
+
+---
+
+## AgentCore Container Architecture
+
+The Strands agent runs inside a Docker container managed by AgentCore:
+
+```mermaid
+flowchart TB
+    subgraph Container["🐳 Docker Container (Python 3.12)"]
+        direction TB
+        
+        subgraph EntryPoint["Entry Point"]
+            OTel["OpenTelemetry Instrument"]
+            Main["src/main.py"]
+            OTel --> Main
+        end
+        
+        subgraph AgentSetup["Agent Configuration"]
+            App["BedrockAgentCoreApp()"]
+            SessionMgr["AgentCoreMemorySessionManager"]
+            Model["BedrockModel<br/>(global.anthropic.claude-sonnet-4-5)"]
+        end
+        
+        subgraph Tools["🔧 Agent Tools"]
+            direction LR
+            ProfileTools["Profile Tools<br/>set_project_*<br/>get_project_profile"]
+            KBTools["KB Tools<br/>search_cba_indicators<br/>search_indicators_by_outcome<br/>search_methods_by_budget<br/>search_location_specific"]
+            MCPTools["MCP Tools<br/>(via Gateway)"]
+        end
+        
+        subgraph KBClient["Knowledge Base Client"]
+            Boto3["boto3 bedrock-agent-runtime"]
+            Retrieve["retrieve() API"]
+        end
+        
+        Main --> App
+        App --> SessionMgr
+        App --> Model
+        Main -->|"@app.entrypoint"| invoke["async invoke(payload, context)"]
+        invoke --> Agent["Strands Agent"]
+        Agent --> Tools
+        KBTools --> KBClient
+    end
+    
+    subgraph EnvVars["Environment Variables"]
+        AWS_REGION["AWS_REGION"]
+        GATEWAY_URL["GATEWAY_URL"]
+        MEMORY_ID["MEMORY_ID"]
+        COGNITO["COGNITO_CLIENT_ID<br/>COGNITO_CLIENT_SECRET<br/>COGNITO_TOKEN_URL<br/>COGNITO_SCOPE"]
+        KB_ID["KNOWLEDGE_BASE_ID"]
+    end
+    
+    subgraph External["External Services"]
+        BedrockSvc["Amazon Bedrock"]
+        KBSvc["Knowledge Base<br/>(ID: 0ZQBMXEKDI)"]
+        MemorySvc["AgentCore Memory"]
+        GatewaySvc["AgentCore Gateway"]
+    end
+    
+    EnvVars -.-> Container
+    KBClient -->|"retrieve()"| KBSvc
+    Model -->|"invoke_model()"| BedrockSvc
+    SessionMgr -->|"session state"| MemorySvc
+    MCPTools -->|"MCP protocol"| GatewaySvc
+
+    classDef container fill:#2496ED,stroke:#1D76B8,color:#fff
+    classDef tools fill:#4CAF50,stroke:#2E7D32,color:#fff
+    classDef external fill:#FF9900,stroke:#232F3E,color:#232F3E
+    classDef env fill:#9C27B0,stroke:#6A1B9A,color:#fff
+
+    class Container,EntryPoint,AgentSetup,KBClient container
+    class ProfileTools,KBTools,MCPTools tools
+    class BedrockSvc,KBSvc,MemorySvc,GatewaySvc external
+    class AWS_REGION,GATEWAY_URL,MEMORY_ID,COGNITO,KB_ID env
+```
+
+### Container Details
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| **Dockerfile** | `agentcore-cba/cbaindicatoragent/Dockerfile` | Python 3.12 slim + uv + OpenTelemetry |
+| **Entry Point** | `src/main.py` | BedrockAgentCoreApp with `@app.entrypoint` |
+| **Model Loader** | `src/model/load.py` | Returns `BedrockModel` with global inference profile |
+| **KB Tools** | `src/kb_tool.py` | Boto3 calls to `bedrock-agent-runtime.retrieve()` |
+| **MCP Client** | `src/mcp_client/client.py` | Cognito auth + streamable HTTP to Gateway |
+
+---
+
 ## Production Request Flow (Lambda & API Gateway)
 
 ```mermaid
@@ -169,7 +433,9 @@ flowchart LR
     class S3 storage
 ```
 
-## Request Flow Details
+---
+
+## Request Flow Code Details
 
 ### 1. Frontend → API Gateway
 
@@ -220,6 +486,8 @@ s3.put_object(Bucket=UPLOAD_BUCKET, Key=file_key, Body=file_bytes)
 bedrock_runtime.invoke_model(modelId='...claude...', body=prompt)  # Extract location, commodity, budget
 ```
 
+---
+
 ## Data Flow Summary
 
 1. **User Input** → User provides project details (location, commodity, budget, outcomes)
@@ -244,5 +512,8 @@ The agent uses specialized search tools to query the CBA M&E Framework:
 |-----------|------|
 | **API Gateway** | Public HTTP endpoint that routes requests to Lambda |
 | **Lambda** | Request router + orchestrator - calls AgentCore for chat, S3+Bedrock for uploads |
-| **AgentCore** | Hosts the Strands agent with KB tools - does the actual "thinking" |
+| **AgentCore Runtime** | Hosts the containerized Strands agent |
+| **AgentCore Gateway** | MCP protocol endpoint for external tools |
+| **AgentCore Memory** | Persistent session/event storage (30-day TTL) |
 | **Knowledge Base** | Vector store with CBA indicators/methods (801 methods, 224 indicators) |
+| **Cognito** | JWT authentication for Gateway access |
