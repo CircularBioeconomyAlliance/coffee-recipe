@@ -46,7 +46,7 @@ def deploy_agent(agent_name, container_uri, role_arn, region="us-west-2"):
 
 if __name__ == "__main__":
     # Configuration - Update these values for your deployment
-    AGENT_NAME = "cba-indicator-agent"
+    AGENT_NAME = "cba_agent_memory"
     CONTAINER_URI = "<account-id>.dkr.ecr.us-west-2.amazonaws.com/cba-agent:latest"
     ROLE_ARN = "arn:aws:iam::<account-id>:role/AgentRuntimeRole"
     REGION = "us-west-2"

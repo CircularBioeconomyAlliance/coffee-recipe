@@ -1,0 +1,15 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "bedrock-agentcore:ListEvents",
+                "bedrock-agentcore:CreateEvent",
+                "bedrock-agentcore:GetMemory",
+                "bedrock-agentcore:InvokeMemory"
+            ],
+            "Resource": "arn:aws:bedrock-agentcore:us-west-2:687995992314:memory/CBA_Indicator_Assistant_Memory-BhKqkC8Yqa"
+        }
+    ]
+}

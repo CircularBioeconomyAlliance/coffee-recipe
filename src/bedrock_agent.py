@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
 """Bedrock AgentCore Runtime deployment wrapper for CBA agent with session management."""
 
+import os
+import sys
 import uuid
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, Tuple
+
+# Add the src directory to Python path for imports when running as script
+_src_dir = Path(__file__).parent
+if str(_src_dir) not in sys.path:
+    sys.path.insert(0, str(_src_dir))
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from strands import Agent
@@ -234,7 +242,5 @@ Please consider this document when answering."""
     }
 
 
-if __name__ == "__main__":
-    app.run()
 if __name__ == "__main__":
     app.run()

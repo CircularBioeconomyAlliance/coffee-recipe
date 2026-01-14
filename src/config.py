@@ -9,7 +9,8 @@ KNOWLEDGE_BASE_ID = "0ZQBMXEKDI"
 AWS_REGION = "us-west-2"
 
 # AgentCore Memory configuration
-# Run scripts/setup_memory.py to create the memory resource and get the ID
+# Custom memory with LTM strategies (summaries, preferences, facts)
+# IAM permissions added via CustomMemoryAccess policy on execution role
 AGENTCORE_MEMORY_ID = os.environ.get(
     "AGENTCORE_MEMORY_ID", "CBA_Indicator_Assistant_Memory-BhKqkC8Yqa"
 )
