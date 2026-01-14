@@ -73,14 +73,55 @@ Frontend pre-fills chat → Agent asks for missing info (e.g., outcomes) → KB 
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| **Frontend** | Next.js | Chat UI, file upload |
-| **API** | API Gateway | HTTP routing |
+| **Frontend** | Next.js (Static Export) | Chat UI, file upload |
+| **API** | API Gateway (HTTP API) | HTTP routing, JWT validation |
 | **Compute** | Lambda | Request handling |
 | **Agent** | Bedrock AgentCore + Strands | Conversation + tool orchestration |
-| **LLM** | Claude Sonnet 4.5 | Reasoning, extraction, responses |
+| **LLM** | Claude Sonnet 4 | Reasoning, extraction, responses |
 | **Data** | Bedrock Knowledge Base | 801 methods, 224 indicators |
-| **Storage** | S3 | Uploaded PDFs |
-| **Auth** | Cognito | Gateway authentication |
+| **Storage** | S3 | Uploaded PDFs, static frontend |
+| **Auth** | Cognito | User pools, JWT tokens |
+| **CDN** | CloudFront | Edge caching, HTTPS |
+
+---
+
+## 🌐 Frontend Deployment
+
+**Static Export + Client-Side API Calls**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   FRONTEND DEPLOYMENT                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│   Next.js Build (static)                                     │
+│         │                                                    │
+│         ▼                                                    │
+│   ┌───────────┐    ┌────────────┐    ┌──────────┐           │
+│   │   HTML    │───►│ CloudFront │◄───│  Browser │           │
+│   │  JS/CSS   │    │   (CDN)    │    │          │           │
+│   │  (in S3)  │    └────────────┘    └────┬─────┘           │
+│   └───────────┘                           │                  │
+│                                           │ API calls        │
+│                                           ▼                  │
+│                                    ┌─────────────┐           │
+│                                    │ API Gateway │           │
+│                                    │  (Lambda)   │           │
+│                                    └─────────────┘           │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| Aspect | Details |
+|--------|---------|
+| **Build Type** | Static export (`next build && next export`) |
+| **Hosting** | S3 bucket + CloudFront distribution |
+| **Rendering** | Client-side React (no SSR needed) |
+| **API Calls** | Browser → API Gateway → Lambda (CORS enabled) |
+| **State** | React state + URL params (no server sessions) |
+| **Cost** | Near-zero (S3 storage + CloudFront requests) |
+
+> **Why Static?** No server = no cold starts, global CDN caching, simpler deployment, and lower cost. All dynamic behavior happens via API calls.
 
 ---
 
@@ -108,6 +149,20 @@ Frontend pre-fills chat → Agent asks for missing info (e.g., outcomes) → KB 
 
 ---
 
+## ⭐ Architecture Highlights
+
+| Feature | Why It Matters |
+|---------|----------------|
+| **Streaming Responses** | Chat responses stream in real-time (not waiting for full completion) — feels responsive |
+| **RAG Pattern** | Knowledge Base uses Retrieval Augmented Generation — Claude searches first, then reasons |
+| **Stateless Lambda** | No session state in Lambda — all context passed per request or stored in AgentCore Memory |
+| **AgentCore Memory** | Short-term (conversation) + Long-term (user preferences) memory persists across sessions |
+| **Tool Orchestration** | AgentCore automatically decides which tools to call — no manual routing logic |
+| **Containerized Agent** | Agent code runs in a managed container — deploy once, scale automatically |
+| **JWT Auth Flow** | Cognito issues tokens → API Gateway validates → Lambda trusts claims |
+
+---
+
 ## ❓ If Asked...
 
 **"How does the PDF extraction work?"**
@@ -118,3 +173,18 @@ Frontend pre-fills chat → Agent asks for missing info (e.g., outcomes) → KB 
 
 **"Is it serverless?"**
 > Yes — Lambda, AgentCore, and Bedrock. Pay only for what you use.
+
+**"Is the frontend static or dynamic?"**
+> Static. Next.js exports HTML/JS/CSS to S3, served via CloudFront. All dynamic behavior happens through API calls to Lambda.
+
+**"How does streaming work?"**
+> AgentCore streams response chunks as they're generated. The frontend reads them via Server-Sent Events, so users see text appear progressively.
+
+**"Does it remember previous conversations?"**
+> Yes — AgentCore Memory stores short-term context (current session) and long-term preferences (returning users). Users can pick up where they left off.
+
+**"What happens if the agent can't find indicators?"**
+> The agent asks clarifying questions, broadens the search, or explains why certain outcomes may have limited measurement options in the Knowledge Base.
+
+**"How do you handle concurrent users?"**
+> Each request is independent — Lambda scales horizontally, AgentCore manages agent instances, and session IDs keep conversations separate.
