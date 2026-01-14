@@ -65,6 +65,39 @@ uv run src/bedrock_agent.py
 
 Runs the agent as an HTTP service on port 8080, compatible with Amazon Bedrock AgentCore Runtime. See `.kiro/steering/deployment.md` for full deployment instructions.
 
+#### Session Management (Optional)
+
+The AgentCore Runtime agent supports conversation persistence using Amazon Bedrock AgentCore Memory. This enables:
+- Multi-turn conversations with context retention
+- User preference learning (budget, technical capacity)
+- Project fact storage across sessions
+- Intelligent conversation summarization
+
+**Setup AgentCore Memory:**
+
+1. Run the setup script to create a memory resource:
+```bash
+uv run scripts/setup_memory.py
+```
+
+2. Set the memory ID in your environment:
+```bash
+export AGENTCORE_MEMORY_ID=<memory-id-from-setup>
+```
+
+3. Test with session management:
+```bash
+curl -X POST http://localhost:8080/invocations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "I need indicators for a cotton project",
+    "session_id": "my-session-123",
+    "actor_id": "user-456"
+  }'
+```
+
+**Note:** The agent works without AgentCore Memory, but sessions won't persist across restarts. Memory strategies incur additional AWS charges.
+
 ## Project Structure
 
 ```
@@ -100,3 +133,4 @@ uv run python tests/test_chat_app.py
 | `AWS_SECRET_ACCESS_KEY` | AWS secret key | Required |
 | `AWS_SESSION_TOKEN` | AWS session token | Required |
 | `STRANDS_KNOWLEDGE_BASE_ID` | Bedrock Knowledge Base ID | Set in code |
+| `AGENTCORE_MEMORY_ID` | AgentCore Memory resource ID (optional) | None |

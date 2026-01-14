@@ -9,7 +9,8 @@ dependencies = [
     "strands-agents>=1.21.0",
     "strands-agents-tools>=0.2.19",
     "streamlit>=1.40.0",
-    "bedrock-agentcore>=0.1.0",
+    "bedrock-agentcore[strands-agents]>=0.1.0",
     "bedrock-agentcore-starter-toolkit>=0.2.6",
     "pyyaml>=6.0.3",
+    "boto3>=1.42.26",
 ]

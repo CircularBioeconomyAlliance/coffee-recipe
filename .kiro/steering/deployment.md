@@ -106,7 +106,7 @@ coffee-recipe/
 
 ## Agent Payload Format
 
-### Request
+### Request (Basic)
 
 ```json
 {
@@ -115,12 +115,30 @@ coffee-recipe/
 }
 ```
 
+### Request (With Session Management)
+
+```json
+{
+  "prompt": "Your question here",
+  "session_id": "uuid-or-user-generated-id",
+  "actor_id": "user-identifier",
+  "file_content": "Optional document content for context"
+}
+```
+
+**Session Parameters:**
+- `session_id` (optional): Unique identifier for the conversation. If not provided, a UUID is generated.
+- `actor_id` (optional): User identifier for cross-session memory. Defaults to "default-user".
+
 ### Response
 
 ```json
 {
   "result": "Agent response text",
-  "status": "success"
+  "status": "success",
+  "session_id": "session-uuid",
+  "actor_id": "user-identifier",
+  "cache_size": 1
 }
 ```
 
@@ -132,6 +150,109 @@ The agent uses the following configuration from `src/config.py`:
 - **Knowledge Base ID**: `0ZQBMXEKDI`
 - **Region**: `us-west-2`
 - **Temperature**: `0.2` (deterministic responses)
+- **AgentCore Memory ID**: Optional (see Session Management below)
+
+## Session Management (Optional)
+
+The agent supports conversation persistence using Amazon Bedrock AgentCore Memory with Long-Term Memory (LTM) strategies.
+
+### Benefits
+
+- **Multi-turn conversations**: Agent remembers context across requests
+- **User preferences**: Budget, technical capacity stored automatically
+- **Project facts**: Location, crop type, expected outcomes persist
+- **Intelligent summaries**: Long conversations are summarized, not truncated
+- **Cross-session memory**: User preferences available across different conversations
+
+### Setup AgentCore Memory
+
+1. **Create the memory resource:**
+
+```bash
+uv run scripts/setup_memory.py
+```
+
+This creates a memory resource with three strategies:
+- `summaryMemoryStrategy`: Summarizes conversation sessions
+- `userPreferenceMemoryStrategy`: Learns user preferences (budget, capacity)
+- `semanticMemoryStrategy`: Stores project facts across sessions
+
+2. **Configure the memory ID:**
+
+Set the memory ID from the setup script:
+
+```bash
+export AGENTCORE_MEMORY_ID=<memory-id>
+```
+
+Or add to `src/config.py`:
+
+```python
+AGENTCORE_MEMORY_ID = "your-memory-id-here"
+```
+
+3. **Test session management:**
+
+```bash
+# First message - establish context
+curl -X POST http://localhost:8080/invocations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "I need indicators for a cotton farming project",
+    "session_id": "test-session-1",
+    "actor_id": "user-123"
+  }'
+
+# Follow-up message - context is retained
+curl -X POST http://localhost:8080/invocations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "The project is in Chad with a low budget",
+    "session_id": "test-session-1",
+    "actor_id": "user-123"
+  }'
+
+# Third message - agent remembers cotton + Chad + low budget
+curl -X POST http://localhost:8080/invocations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "What indicators would you recommend?",
+    "session_id": "test-session-1",
+    "actor_id": "user-123"
+  }'
+```
+
+### Memory Namespaces
+
+The agent uses three memory namespaces:
+
+- `/preferences/{actorId}`: User preferences (top_k=5, relevance=0.7)
+- `/facts/{actorId}`: Project facts (top_k=10, relevance=0.5)
+- `/summaries/{actorId}/{sessionId}`: Session summaries (top_k=5, relevance=0.6)
+
+### Agent Caching
+
+For performance, the agent implements an LRU cache:
+- **Max size**: 100 concurrent sessions
+- **TTL**: 1 hour per session
+- **Automatic cleanup**: Expired sessions removed on new requests
+
+### Cost Considerations
+
+AgentCore Memory with LTM strategies incurs additional charges:
+- Memory resource storage
+- Strategy processing (summarization, preference extraction)
+- Retrieval operations
+
+Monitor usage in AWS Console > Bedrock > AgentCore Memory.
+
+### Backward Compatibility
+
+The agent works without AgentCore Memory:
+- Sessions still function but use in-memory caching only
+- Conversation history is maintained during agent lifetime
+- Sessions are lost when the agent restarts
+- No cross-session user preference learning
 
 ## IAM Permissions
 
@@ -140,8 +261,9 @@ Your IAM role needs permissions for:
 - Amazon Bedrock model invocation
 - Amazon Bedrock Knowledge Base access
 - CloudWatch Logs (for monitoring)
+- Amazon Bedrock AgentCore Memory (if using session management)
 
-Example policy:
+Example policy (basic):
 
 ```json
 {
@@ -154,6 +276,43 @@ Example policy:
         "bedrock:Retrieve"
       ],
       "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:*"
+    }
+  ]
+}
+```
+
+Example policy (with AgentCore Memory):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:Retrieve"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "bedrock-agentcore:GetMemory",
+        "bedrock-agentcore:PutMemory",
+        "bedrock-agentcore:DeleteMemory",
+        "bedrock-agentcore:ListMemories"
+      ],
+      "Resource": "arn:aws:bedrock-agentcore:*:*:memory/*"
     },
     {
       "Effect": "Allow",
