@@ -5,14 +5,31 @@
 ---
 
 ## Notes:
+## Talking points (45 seconds)
 
-## 45-second script (updated to match the real aim)
+* **Two ways in**
 
-“Here’s how the CBA Indicator Assistant works. Users start in one of two ways: they chat directly, or they upload a project PDF. If they upload, we extract the key details up front so we only ask for what’s missing.
+  * Users either start by chatting, or they upload a project PDF.
+  * Uploads go to S3 and we extract the basics up front, so we only ask what’s missing. 
 
-From either route, we capture the essentials, mainly location, commodity, budget, and intended outcomes. The first job is to identify indicators that are genuinely relevant to that project. Then, for those indicators, we return the measurement methods that fit the project’s requirements and constraints, like cost and practicality.
+* **Project profile**
 
-Under the hood it’s built on AWS Bedrock with Claude Sonnet in AgentCore, plus a Next.js frontend. It’s serverless, so it stays quick and scales cleanly.” 
+  * We capture location, commodity, budget, and intended outcomes, plus technical capacity if needed. 
+
+* **Decision flow**
+
+  * Step one: find indicators that are genuinely relevant to the project.
+  * Step two: for those indicators, return the measurement methods that match requirements and constraints, especially cost and practicality. 
+
+* **What the user sees**
+
+  * Results stream back into the chat as they’re generated, so it feels immediate. 
+
+* **Tech close**
+
+  * Front end: static Next.js hosted on **S3 + CloudFront**.
+  * Back end: API Gateway + Lambda.
+  * Agent: **Strands running on Bedrock AgentCore** with Claude Sonnet and the Knowledge Base. 
 
 
 ## 🎤 Talking Points (30-45 seconds)
