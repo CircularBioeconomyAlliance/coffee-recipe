@@ -48,10 +48,9 @@ export default function UploadPage() {
   };
 
   const handleFile = async (selectedFile: File) => {
-    const validTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel"];
-    
-    if (!validTypes.includes(selectedFile.type)) {
-      alert("Please upload a PDF or Excel file");
+    // Only PDF is supported by the backend
+    if (selectedFile.type !== "application/pdf") {
+      alert("Please upload a PDF file");
       return;
     }
 
@@ -119,14 +118,12 @@ export default function UploadPage() {
                 <input
                   type="file"
                   onChange={handleFileInput}
-                  accept=".pdf,.xlsx,.xls"
+                  accept=".pdf"
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
 
                 <div className="flex gap-4 text-sm text-gray-500">
-                  <span>📄 PDF</span>
-                  <span>•</span>
-                  <span>📊 Excel</span>
+                  <span>📄 PDF only</span>
                   <span>•</span>
                   <span>Max 10MB</span>
                 </div>

@@ -21,9 +21,8 @@ export default function Home() {
               <p className="text-xs text-gray-400">Circular Bioeconomy Alliance</p>
             </div>
           </div>
-          <div className="flex gap-4">
-            <button className="text-sm text-gray-300 hover:text-white transition">Help</button>
-            <button className="text-sm text-gray-300 hover:text-white transition">Profile</button>
+          <div className="flex gap-4 text-sm text-gray-400">
+            <span>Circular Bioeconomy Alliance</span>
           </div>
         </div>
       </header>
@@ -64,7 +63,7 @@ export default function Home() {
               </div>
               <h3 className="text-2xl font-bold mb-3">Upload Project File</h3>
               <p className="text-gray-300 mb-6">
-                Have a project document? Upload your PDF or Excel file and let AI
+                Have a project document? Upload your PDF file and let AI
                 analyze it to recommend the best indicators.
               </p>
               <ul className="space-y-2 mb-8 text-sm text-gray-400">

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowLeft, Filter, Grid3x3, List, GitCompare, Download, ChevronDown, ChevronUp, DollarSign, Target, Zap } from "lucide-react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { ArrowLeft, Filter, Grid3x3, List, GitCompare, Download, ChevronDown, ChevronUp, DollarSign, Target, Zap, Loader2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { api, Indicator as ApiIndicator } from "@/lib/api";
 
 interface Indicator {
   id: number;
@@ -28,8 +30,8 @@ interface Method {
   ease: string;
 }
 
-// Mock data
-const mockIndicators: Indicator[] = [
+// Fallback data shown when no recommendations are available
+const fallbackIndicators: Indicator[] = [
   {
     id: 47,
     name: "Species Diversity Index",
@@ -102,8 +104,14 @@ const mockIndicators: Indicator[] = [
   },
 ];
 
-export default function ResultsPage() {
-  const [indicators] = useState<Indicator[]>(mockIndicators);
+function ResultsContent() {
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get("session_id");
+
+  const [indicators, setIndicators] = useState<Indicator[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [usingFallback, setUsingFallback] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [selectedForCompare, setSelectedForCompare] = useState<number[]>([]);
@@ -112,6 +120,59 @@ export default function ResultsPage() {
     cost: "all",
     ease: "all",
   });
+
+  // Fetch recommendations from API
+  useEffect(() => {
+    async function fetchRecommendations() {
+      if (!sessionId) {
+        // No session ID - use fallback data
+        setIndicators(fallbackIndicators);
+        setUsingFallback(true);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await api.getRecommendations(sessionId);
+
+        if (response.indicators && response.indicators.length > 0) {
+          // Transform API indicators to match our interface
+          const transformedIndicators: Indicator[] = response.indicators.map((ind: ApiIndicator) => ({
+            id: ind.id,
+            name: ind.name,
+            component: ind.component || "Unknown",
+            class: ind.class || "Unknown",
+            cost: ind.cost || "Medium",
+            accuracy: ind.accuracy || "Medium",
+            ease: ind.ease || "Medium",
+            principle: ind.principle || "",
+            criterion: ind.criterion || "",
+            priority: ind.priority || "Primary",
+            definition: ind.definition || "",
+            methods: ind.methods || [],
+          }));
+          setIndicators(transformedIndicators);
+          setUsingFallback(false);
+        } else {
+          // No recommendations found - use fallback
+          setIndicators(fallbackIndicators);
+          setUsingFallback(true);
+        }
+      } catch (err) {
+        console.error("Failed to fetch recommendations:", err);
+        setError(err instanceof Error ? err.message : "Failed to load recommendations");
+        // Use fallback on error
+        setIndicators(fallbackIndicators);
+        setUsingFallback(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchRecommendations();
+  }, [sessionId]);
 
   const toggleExpand = (id: number) => {
     setExpandedId(expandedId === id ? null : id);
@@ -130,8 +191,50 @@ export default function ResultsPage() {
     return true;
   });
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-cba-gold animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Loading recommendations...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
+      {/* Error/Warning Banner */}
+      {error && (
+        <div className="bg-red-900/50 border-b border-red-700 px-6 py-3">
+          <div className="container mx-auto flex items-center gap-2 text-red-200">
+            <AlertCircle className="w-5 h-5" />
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
+
+      {usingFallback && !error && (
+        <div className="bg-amber-600 border-b-2 border-amber-400 px-6 py-4">
+          <div className="container mx-auto flex items-center gap-3 text-white">
+            <div className="bg-amber-800 rounded-full p-2">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold text-lg">Showing Example Data</p>
+              <p className="text-amber-100 text-sm">These are sample indicators for demonstration. Complete a chat conversation to get personalized recommendations for your project.</p>
+            </div>
+            <Link
+              href="/chat"
+              className="ml-auto bg-white text-amber-700 hover:bg-amber-50 font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap"
+            >
+              Start Chat
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="border-b border-cba-navy-light bg-cba-navy-dark/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -140,39 +243,50 @@ export default function ResultsPage() {
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-lg font-bold">Recommended Indicators</h1>
-              <p className="text-xs text-gray-400">{filteredIndicators.length} indicators found</p>
+              <h1 className="text-lg font-bold flex items-center gap-2">
+                {usingFallback ? "Example Indicators" : "Recommended Indicators"}
+                {usingFallback && (
+                  <span className="text-xs font-normal bg-amber-600 text-white px-2 py-0.5 rounded-full">
+                    DEMO DATA
+                  </span>
+                )}
+              </h1>
+              <p className="text-xs text-gray-400">
+                {filteredIndicators.length} {usingFallback ? "example indicators shown" : "indicators found"}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex gap-2">
               <button
                 onClick={() => setViewMode("grid")}
-                className={`p-2 rounded-lg transition ${
-                  viewMode === "grid" ? "bg-cba-gold text-cba-navy" : "text-gray-400 hover:text-white"
-                }`}
+                className={`p-2 rounded-lg transition ${viewMode === "grid" ? "bg-cba-gold text-cba-navy" : "text-gray-400 hover:text-white"
+                  }`}
               >
                 <Grid3x3 className="w-5 h-5" />
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`p-2 rounded-lg transition ${
-                  viewMode === "list" ? "bg-cba-gold text-cba-navy" : "text-gray-400 hover:text-white"
-                }`}
+                className={`p-2 rounded-lg transition ${viewMode === "list" ? "bg-cba-gold text-cba-navy" : "text-gray-400 hover:text-white"
+                  }`}
               >
                 <List className="w-5 h-5" />
               </button>
             </div>
             {selectedForCompare.length > 0 && (
               <Link
-                href={`/compare?ids=${selectedForCompare.join(",")}`}
+                href={`/compare?ids=${selectedForCompare.join(",")}${sessionId ? `&session_id=${sessionId}` : ""}`}
                 className="flex items-center gap-2 bg-cba-gold hover:bg-cba-gold-light text-cba-navy font-semibold px-4 py-2 rounded-lg transition"
               >
                 <GitCompare className="w-4 h-4" />
                 Compare ({selectedForCompare.length})
               </Link>
             )}
-            <button className="flex items-center gap-2 text-gray-400 hover:text-white transition">
+            <button
+              className="flex items-center gap-2 text-gray-500 cursor-not-allowed opacity-60"
+              disabled
+              title="Export coming soon"
+            >
               <Download className="w-5 h-5" />
             </button>
           </div>
@@ -228,6 +342,7 @@ export default function ResultsPage() {
                 onToggleExpand={() => toggleExpand(indicator.id)}
                 onToggleCompare={() => toggleCompare(indicator.id)}
                 viewMode={viewMode}
+                isMockData={usingFallback}
               />
             ))}
           </div>
@@ -278,6 +393,7 @@ function IndicatorCard({
   onToggleExpand,
   onToggleCompare,
   viewMode,
+  isMockData = false,
 }: {
   indicator: Indicator;
   isExpanded: boolean;
@@ -285,14 +401,20 @@ function IndicatorCard({
   onToggleExpand: () => void;
   onToggleCompare: () => void;
   viewMode: "grid" | "list";
+  isMockData?: boolean;
 }) {
   return (
     <motion.div
       layout
-      className={`bg-cba-navy-light border rounded-2xl overflow-hidden transition-all ${
-        isSelected ? "border-cba-gold" : "border-cba-gold/20 hover:border-cba-gold/40"
-      }`}
+      className={`bg-cba-navy-light border rounded-2xl overflow-hidden transition-all relative ${isSelected ? "border-cba-gold" : isMockData ? "border-amber-600/40 hover:border-amber-600/60" : "border-cba-gold/20 hover:border-cba-gold/40"
+        }`}
     >
+      {/* Mock Data Ribbon */}
+      {isMockData && (
+        <div className="absolute top-0 right-0 bg-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">
+          EXAMPLE
+        </div>
+      )}
       <div className="p-6">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
@@ -331,11 +453,10 @@ function IndicatorCard({
           </button>
           <button
             onClick={onToggleCompare}
-            className={`px-4 py-2 rounded-lg transition text-sm font-semibold ${
-              isSelected
-                ? "bg-cba-gold text-cba-navy"
-                : "bg-cba-navy hover:bg-cba-navy-dark text-white"
-            }`}
+            className={`px-4 py-2 rounded-lg transition text-sm font-semibold ${isSelected
+              ? "bg-cba-gold text-cba-navy"
+              : "bg-cba-navy hover:bg-cba-navy-dark text-white"
+              }`}
           >
             {isSelected ? "Selected" : "Compare"}
           </button>
@@ -389,5 +510,21 @@ function AttributeBadge({ icon, label, value }: { icon: React.ReactNode; label: 
       <span className="text-gray-500">{label}:</span>
       <span className={`font-semibold ${colorMap[value] || "text-gray-300"}`}>{value}</span>
     </div>
+  );
+}
+
+// Export with Suspense boundary for useSearchParams
+export default function ResultsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-cba-gold animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ResultsContent />
+    </Suspense>
   );
 }

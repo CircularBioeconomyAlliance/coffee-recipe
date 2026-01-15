@@ -15,7 +15,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from strands import Agent
+from strands.models import BedrockModel
 from strands_tools import memory, use_llm
+from pypdf import PdfReader
+import openpyxl
 
 # Import shared configuration
 from config import MODEL_ID, KNOWLEDGE_BASE_ID, SYSTEM_PROMPT
@@ -362,16 +365,39 @@ def extract_file_content(uploaded_file):
             return "\n".join(formatted_content)
             
         elif file_extension == 'pdf':
-            # Handle PDF files - basic implementation
-            # Note: For a full implementation, you'd want to use PyPDF2 or similar
-            # For now, return a placeholder message
-            return f"PDF file '{uploaded_file.name}' uploaded. PDF text extraction requires additional libraries (PyPDF2, pdfplumber). Content: [PDF content would be extracted here]"
+            # Handle PDF files using pypdf
+            try:
+                uploaded_file.seek(0)
+                reader = PdfReader(io.BytesIO(uploaded_file.read()))
+                text = []
+                for page in reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text.append(page_text)
+                return "\n".join(text) if text else "PDF file appears to be empty or contains no extractable text."
+            except Exception as e:
+                return f"Error extracting PDF content: {str(e)}"
+            
+        elif file_extension in ['xlsx', 'xls']:
+            # Handle Excel files using openpyxl
+            try:
+                uploaded_file.seek(0)
+                wb = openpyxl.load_workbook(io.BytesIO(uploaded_file.read()), data_only=True)
+                text = []
+                for sheet_name in wb.sheetnames:
+                    sheet = wb[sheet_name]
+                    text.append(f"=== Sheet: {sheet_name} ===")
+                    for row in sheet.iter_rows(values_only=True):
+                        row_text = [str(cell) if cell is not None else "" for cell in row]
+                        if any(row_text):  # Skip empty rows
+                            text.append(" | ".join(row_text))
+                return "\n".join(text)
+            except Exception as e:
+                return f"Error extracting Excel content: {str(e)}"
             
         elif file_extension == 'docx':
-            # Handle DOCX files - basic implementation  
-            # Note: For a full implementation, you'd want to use python-docx
-            # For now, return a placeholder message
-            return f"DOCX file '{uploaded_file.name}' uploaded. DOCX text extraction requires additional libraries (python-docx). Content: [DOCX content would be extracted here]"
+            # DOCX requires python-docx which is not in dependencies
+            return f"DOCX file '{uploaded_file.name}' uploaded. DOCX text extraction requires python-docx library."
             
         else:
             return f"Unsupported file type: {file_extension}"
@@ -385,8 +411,12 @@ def get_agent():
     Initialize and cache the Strands agent for the CBA chatbot.
     Uses st.cache_resource to ensure the agent is only created once per session.
     """
+    bedrock_model = BedrockModel(
+        model_id=MODEL_ID,
+        temperature=0.2,  # Low temperature for more focused responses
+    )
     agent = Agent(
-        model=MODEL_ID,
+        model=bedrock_model,
         system_prompt=SYSTEM_PROMPT,
         tools=[memory, use_llm],
     )

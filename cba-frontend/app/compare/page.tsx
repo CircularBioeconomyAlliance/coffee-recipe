@@ -1,10 +1,11 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Download, X } from "lucide-react";
+import { ArrowLeft, Download, X, Loader2, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useState, useEffect } from "react";
+import { api, Indicator as ApiIndicator } from "@/lib/api";
 
 interface Indicator {
   id: number;
@@ -21,8 +22,8 @@ interface Indicator {
   definition: string;
 }
 
-// Mock data (same as results page)
-const mockIndicators: Record<number, Indicator> = {
+// Fallback mock data (same as results page)
+const fallbackIndicators: Record<number, Indicator> = {
   47: {
     id: 47,
     name: "Species Diversity Index",
@@ -84,14 +85,87 @@ const mockIndicators: Record<number, Indicator> = {
 function ComparePageContent() {
   const searchParams = useSearchParams();
   const ids = searchParams.get("ids")?.split(",").map(Number) || [];
-  const indicators = ids.map((id) => mockIndicators[id]).filter(Boolean);
+  const sessionId = searchParams.get("session_id");
+  
+  const [indicators, setIndicators] = useState<Indicator[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [usingFallback, setUsingFallback] = useState(false);
+
+  useEffect(() => {
+    async function fetchIndicators() {
+      if (ids.length === 0) {
+        setLoading(false);
+        return;
+      }
+
+      // If we have a session ID, try to fetch from API
+      if (sessionId) {
+        try {
+          setLoading(true);
+          const response = await api.getRecommendations(sessionId);
+          
+          if (response.indicators && response.indicators.length > 0) {
+            // Filter to only the selected IDs
+            const filtered = response.indicators
+              .filter((ind: ApiIndicator) => ids.includes(ind.id))
+              .map((ind: ApiIndicator) => ({
+                id: ind.id,
+                name: ind.name,
+                component: ind.component || "Unknown",
+                class: ind.class || "Unknown",
+                cost: ind.cost || "Medium",
+                accuracy: ind.accuracy || "Medium",
+                ease: ind.ease || "Medium",
+                principle: ind.principle || "",
+                criterion: ind.criterion || "",
+                priority: ind.priority || "Primary",
+                methods: ind.methods?.length || 0,
+                definition: ind.definition || "",
+              }));
+            
+            if (filtered.length > 0) {
+              setIndicators(filtered);
+              setUsingFallback(false);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch recommendations:", err);
+          setError(err instanceof Error ? err.message : "Failed to load");
+        }
+      }
+
+      // Use fallback data
+      const fallbackResults = ids
+        .map((id) => fallbackIndicators[id])
+        .filter(Boolean);
+      setIndicators(fallbackResults);
+      setUsingFallback(true);
+      setLoading(false);
+    }
+
+    fetchIndicators();
+  }, [ids.join(","), sessionId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-cba-gold animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Loading comparison...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (indicators.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-400 mb-4">No indicators selected for comparison</p>
-          <Link href="/results" className="text-cba-gold hover:text-cba-gold-light">
+          <Link href={sessionId ? `/results?session_id=${sessionId}` : "/results"} className="text-cba-gold hover:text-cba-gold-light">
             Go back to results
           </Link>
         </div>
@@ -99,23 +173,59 @@ function ComparePageContent() {
     );
   }
 
+  const resultsUrl = sessionId ? `/results?session_id=${sessionId}` : "/results";
+
   return (
     <div className="min-h-screen">
+      {/* Warning Banner */}
+      {usingFallback && (
+        <div className="bg-amber-600 border-b-2 border-amber-400 px-6 py-4">
+          <div className="container mx-auto flex items-center gap-3 text-white">
+            <div className="bg-amber-800 rounded-full p-2">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold text-lg">Comparing Example Data</p>
+              <p className="text-amber-100 text-sm">These are sample indicators for demonstration. Complete a chat conversation to compare your personalized recommendations.</p>
+            </div>
+            <Link
+              href="/chat"
+              className="ml-auto bg-white text-amber-700 hover:bg-amber-50 font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap"
+            >
+              Start Chat
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="border-b border-cba-navy-light bg-cba-navy-dark/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/results" className="text-gray-400 hover:text-white transition">
+            <Link href={resultsUrl} className="text-gray-400 hover:text-white transition">
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-lg font-bold">Compare Indicators</h1>
-              <p className="text-xs text-gray-400">{indicators.length} indicators selected</p>
+              <h1 className="text-lg font-bold flex items-center gap-2">
+                {usingFallback ? "Compare Example Indicators" : "Compare Indicators"}
+                {usingFallback && (
+                  <span className="text-xs font-normal bg-amber-600 text-white px-2 py-0.5 rounded-full">
+                    DEMO DATA
+                  </span>
+                )}
+              </h1>
+              <p className="text-xs text-gray-400">
+                {indicators.length} {usingFallback ? "example indicators" : "indicators"} selected
+              </p>
             </div>
           </div>
-          <button className="flex items-center gap-2 bg-cba-gold hover:bg-cba-gold-light text-cba-navy font-semibold px-4 py-2 rounded-lg transition">
+          <button 
+            className="flex items-center gap-2 bg-gray-600 text-gray-300 font-semibold px-4 py-2 rounded-lg cursor-not-allowed opacity-60"
+            disabled
+            title="Export coming soon"
+          >
             <Download className="w-4 h-4" />
-            Export Comparison
+            Export (Coming Soon)
           </button>
         </div>
       </header>
@@ -209,13 +319,17 @@ function ComparePageContent() {
         {/* Actions */}
         <div className="mt-8 flex gap-4 justify-center">
           <Link
-            href="/results"
+            href={resultsUrl}
             className="bg-cba-navy-light hover:bg-cba-navy text-white font-semibold px-6 py-3 rounded-lg transition"
           >
             Back to Results
           </Link>
-          <button className="bg-cba-gold hover:bg-cba-gold-light text-cba-navy font-semibold px-6 py-3 rounded-lg transition">
-            Select These Indicators
+          <button 
+            className="bg-gray-600 text-gray-300 font-semibold px-6 py-3 rounded-lg cursor-not-allowed opacity-60"
+            disabled
+            title="Selection coming soon"
+          >
+            Select Indicators (Coming Soon)
           </button>
         </div>
       </main>

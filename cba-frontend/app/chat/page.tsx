@@ -19,6 +19,11 @@ interface ProjectProfile {
   capacity?: string;
 }
 
+// Generate a unique session ID
+function generateSessionId(): string {
+  return `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
 function ChatPageContent() {
   const searchParams = useSearchParams();
   
@@ -28,6 +33,11 @@ function ChatPageContent() {
     commodity: searchParams.get("commodity") || undefined,
     budget: searchParams.get("budget") || undefined,
   };
+
+  // Session ID - use from URL or generate new one
+  const [sessionId] = useState<string>(() => 
+    searchParams.get("session_id") || generateSessionId()
+  );
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -40,6 +50,7 @@ function ChatPageContent() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [profile, setProfile] = useState<ProjectProfile>(initialProfile);
+  const [hasRecommendations, setHasRecommendations] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -60,10 +71,15 @@ function ChatPageContent() {
 
     try {
       const { api } = await import("@/lib/api");
-      const response = await api.chat(userMessage, searchParams.get("session_id") || undefined, profile);
+      const response = await api.chat(userMessage, sessionId, profile);
       
-      // Update profile based on response
-      updateProfile(userMessage);
+      // Extract profile information from the conversation
+      extractProfileFromMessage(userMessage, response.response);
+      
+      // Track if we have recommendations available
+      if (response.has_recommendations) {
+        setHasRecommendations(true);
+      }
       
       setMessages((prev) => [...prev, { role: "assistant", content: response.response }]);
     } catch (error) {
@@ -74,23 +90,84 @@ function ChatPageContent() {
     }
   };
 
-  const updateProfile = (userMessage: string) => {
-    // Profile extraction is handled by the agent's backend tools
-    // (set_project_location, set_project_commodity, etc.)
-    // This function is kept for future manual profile updates if needed
+  // Extract profile fields from conversation context
+  const extractProfileFromMessage = (userMessage: string, assistantResponse: string) => {
+    const lowerUser = userMessage.toLowerCase();
+    const lowerAssistant = assistantResponse.toLowerCase();
+    
+    setProfile(prev => {
+      const updated = { ...prev };
+      
+      // If assistant confirms location was set, or asks about commodity (meaning location is done)
+      if (!prev.location && (
+        lowerAssistant.includes("location set") ||
+        lowerAssistant.includes("commodity") ||
+        lowerAssistant.includes("product") ||
+        lowerAssistant.includes("what crop") ||
+        lowerAssistant.includes("what are you growing")
+      )) {
+        // Extract location from user's previous message
+        updated.location = userMessage;
+      }
+      
+      // If assistant confirms commodity or asks about budget
+      if (prev.location && !prev.commodity && (
+        lowerAssistant.includes("commodity set") ||
+        lowerAssistant.includes("budget") ||
+        lowerAssistant.includes("funding") ||
+        lowerAssistant.includes("how much")
+      )) {
+        updated.commodity = userMessage;
+      }
+      
+      // If assistant confirms budget or asks about outcomes
+      if (prev.commodity && !prev.budget && (
+        lowerAssistant.includes("budget set") ||
+        lowerAssistant.includes("outcome") ||
+        lowerAssistant.includes("goal") ||
+        lowerAssistant.includes("measure") ||
+        lowerAssistant.includes("achieve")
+      )) {
+        updated.budget = userMessage;
+      }
+      
+      // If assistant confirms outcomes or asks about capacity/provides recommendations
+      if (prev.budget && !prev.outcomes && (
+        lowerAssistant.includes("outcomes set") ||
+        lowerAssistant.includes("capacity") ||
+        lowerAssistant.includes("technical") ||
+        lowerAssistant.includes("recommend") ||
+        lowerAssistant.includes("indicator")
+      )) {
+        updated.outcomes = userMessage;
+      }
+      
+      // If we got recommendations, mark capacity as skipped if not set
+      if (prev.outcomes && !prev.capacity && (
+        lowerAssistant.includes("indicator") ||
+        lowerAssistant.includes("recommend") ||
+        lowerAssistant.includes("based on your")
+      )) {
+        updated.capacity = updated.capacity || "Not specified";
+      }
+      
+      return updated;
+    });
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
 
-  const profileComplete = Object.keys(profile).length;
-  const profileTotal = 4;
-  // Only complete if we have 4 required fields AND either have capacity or explicitly skipped it
-  const isComplete = profileComplete >= profileTotal && (profile.capacity !== undefined);
+  // Count only filled profile fields (not undefined)
+  const filledFields = [profile.location, profile.commodity, profile.budget, profile.outcomes].filter(Boolean).length;
+  const requiredFields = 4;
+  
+  // Profile is complete when we have all 4 required fields OR we have recommendations
+  const isComplete = filledFields >= requiredFields || hasRecommendations;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -107,7 +184,7 @@ function ChatPageContent() {
             </div>
           </div>
           <div className="text-sm text-gray-400">
-            {profileComplete}/4 required fields
+            {filledFields}/{requiredFields} required fields
           </div>
         </div>
       </header>
@@ -152,13 +229,13 @@ function ChatPageContent() {
           <div className="mt-8">
             <div className="flex justify-between text-xs text-gray-400 mb-2">
               <span>Progress</span>
-              <span>{Math.round((profileComplete / 4) * 100)}%</span>
+              <span>{Math.round((filledFields / requiredFields) * 100)}%</span>
             </div>
             <div className="h-2 bg-cba-navy-light rounded-full overflow-hidden">
               <motion.div
                 className="h-full bg-gradient-to-r from-cba-gold to-cba-gold-light"
                 initial={{ width: 0 }}
-                animate={{ width: `${(profileComplete / 4) * 100}%` }}
+                animate={{ width: `${(filledFields / requiredFields) * 100}%` }}
                 transition={{ duration: 0.5 }}
               />
             </div>
@@ -216,7 +293,7 @@ function ChatPageContent() {
                     All information gathered. Ready to find your indicators.
                   </p>
                   <Link
-                    href="/results"
+                    href={`/results?session_id=${encodeURIComponent(sessionId)}`}
                     className="inline-flex items-center gap-2 bg-cba-gold hover:bg-cba-gold-light text-cba-navy font-semibold px-8 py-3 rounded-lg transition"
                   >
                     View Recommendations
@@ -230,7 +307,7 @@ function ChatPageContent() {
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyDown}
                   placeholder="Type your answer..."
                   className="flex-1 bg-cba-navy-light border border-cba-gold/20 rounded-xl px-6 py-4 focus:outline-none focus:border-cba-gold/40 transition"
                   disabled={isLoading}

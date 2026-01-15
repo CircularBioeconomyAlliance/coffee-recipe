@@ -61,49 +61,69 @@ from contextlib import nullcontext
 from types import SimpleNamespace
 strands_mcp_client = nullcontext(SimpleNamespace(list_tools_sync=lambda: []))
 
-# CBA Project Profile State
-project_profile = {
-    "location": None,
-    "commodity": None,
-    "budget": None,
-    "outcomes": None,
-    "capacity": None
-}
+# Session-scoped project profiles - prevents concurrent request conflicts
+# Key: session_id, Value: profile dict
+session_profiles = {}
 
-@tool
-def set_project_location(location: str) -> str:
-    """Set the project location/region"""
-    project_profile["location"] = location
-    return f"Location set to: {location}"
+def get_session_profile(session_id: str) -> dict:
+    """Get or create profile for a session."""
+    if session_id not in session_profiles:
+        session_profiles[session_id] = {
+            "location": None,
+            "commodity": None,
+            "budget": None,
+            "outcomes": None,
+            "capacity": None
+        }
+    return session_profiles[session_id]
 
-@tool
-def set_project_commodity(commodity: str) -> str:
-    """Set the primary commodity/product"""
-    project_profile["commodity"] = commodity
-    return f"Commodity set to: {commodity}"
+def create_profile_tools(session_id: str):
+    """Create session-scoped profile tools with captured session_id."""
+    profile = get_session_profile(session_id)
+    
+    @tool
+    def set_project_location(location: str) -> str:
+        """Set the project location/region"""
+        profile["location"] = location
+        return f"Location set to: {location}"
 
-@tool
-def set_project_budget(budget: str) -> str:
-    """Set the project budget range"""
-    project_profile["budget"] = budget
-    return f"Budget set to: {budget}"
+    @tool
+    def set_project_commodity(commodity: str) -> str:
+        """Set the primary commodity/product"""
+        profile["commodity"] = commodity
+        return f"Commodity set to: {commodity}"
 
-@tool
-def set_project_outcomes(outcomes: str) -> str:
-    """Set the desired project outcomes"""
-    project_profile["outcomes"] = outcomes
-    return f"Outcomes set to: {outcomes}"
+    @tool
+    def set_project_budget(budget: str) -> str:
+        """Set the project budget range"""
+        profile["budget"] = budget
+        return f"Budget set to: {budget}"
 
-@tool
-def set_technical_capacity(capacity: str) -> str:
-    """Set the technical capacity level (optional)"""
-    project_profile["capacity"] = capacity
-    return f"Technical capacity set to: {capacity}"
+    @tool
+    def set_project_outcomes(outcomes: str) -> str:
+        """Set the desired project outcomes"""
+        profile["outcomes"] = outcomes
+        return f"Outcomes set to: {outcomes}"
 
-@tool
-def get_project_profile() -> dict:
-    """Get the current project profile"""
-    return project_profile
+    @tool
+    def set_technical_capacity(capacity: str) -> str:
+        """Set the technical capacity level (optional)"""
+        profile["capacity"] = capacity
+        return f"Technical capacity set to: {capacity}"
+
+    @tool
+    def get_project_profile() -> dict:
+        """Get the current project profile"""
+        return profile.copy()
+    
+    return [
+        set_project_location,
+        set_project_commodity,
+        set_project_budget,
+        set_project_outcomes,
+        set_technical_capacity,
+        get_project_profile
+    ]
 
 # Integrate with Bedrock AgentCore
 app = BedrockAgentCoreApp()
@@ -132,7 +152,10 @@ async def invoke(payload, context):
 
     with strands_mcp_client as client:
         # Get MCP Tools
-        tools = client.list_tools_sync()
+        mcp_tools = client.list_tools_sync()
+        
+        # Create session-scoped profile tools (prevents concurrent request conflicts)
+        profile_tools = create_profile_tools(session_id)
 
         # Create agent with Knowledge Base
         agent = Agent(
@@ -171,18 +194,12 @@ Your workflow:
 
 Be conversational, ask one question at a time, and confirm understanding before moving forward. After gathering all required information, actively search the knowledge base to provide specific, actionable recommendations.
             """,
-            tools=[
-                set_project_location,
-                set_project_commodity,
-                set_project_budget,
-                set_project_outcomes,
-                set_technical_capacity,
-                get_project_profile,
+            tools=profile_tools + [
                 search_cba_indicators,
                 search_indicators_by_outcome,
                 search_methods_by_budget,
                 search_location_specific_indicators
-            ] + tools
+            ] + mcp_tools
         )
 
         # Execute and format response
