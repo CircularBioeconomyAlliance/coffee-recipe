@@ -4,6 +4,17 @@
 
 ---
 
+## Notes:
+
+## 45-second script (updated to match the real aim)
+
+“Here’s how the CBA Indicator Assistant works. Users start in one of two ways: they chat directly, or they upload a project PDF. If they upload, we extract the key details up front so we only ask for what’s missing.
+
+From either route, we capture the essentials, mainly location, commodity, budget, and intended outcomes. The first job is to identify indicators that are genuinely relevant to that project. Then, for those indicators, we return the measurement methods that fit the project’s requirements and constraints, like cost and practicality.
+
+Under the hood it’s built on AWS Bedrock with Claude Sonnet in AgentCore, plus a Next.js frontend. It’s serverless, so it stays quick and scales cleanly.” 
+
+
 ## 🎤 Talking Points (30-45 seconds)
 
 ### 1. Two Entry Points (10 sec)
