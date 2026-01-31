@@ -220,34 +220,6 @@ You must see your AWS account ID. If this fails, **stop and fix credentials** be
 
 ## 1. Local Development
 
-### Streamlit App (Development UI)
-
-```bash
-# Clone the repository
-git clone https://github.com/CircularBioeconomyAlliance/coffee-recipe.git
-cd coffee-recipe
-
-# Install Python dependencies
-uv sync
-
-# Set AWS credentials
-export AWS_DEFAULT_REGION=us-west-2
-export AWS_ACCESS_KEY_ID=<your-access-key>
-export AWS_SECRET_ACCESS_KEY=<your-secret-key>
-export AWS_SESSION_TOKEN=<your-session-token>  # If using temporary credentials
-
-# Run Streamlit app
-uv run streamlit run src/app.py
-```
-
-Opens at `http://localhost:8501`
-
-### CLI Agent (Testing)
-
-```bash
-uv run python src/agent.py
-```
-
 ### Frontend (Next.js)
 
 ```bash

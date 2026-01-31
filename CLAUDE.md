@@ -28,13 +28,9 @@ coffee-recipe/
 ├── agentcore-cba/                # Bedrock AgentCore agent
 │   └── cbaindicatoragent/
 │       ├── src/
-│       │   ├── main.py           # Agent entry point
-│       │   ├── kb_tool.py        # Knowledge Base search tools
-│       │   └── profile_tools.py  # Project profile management
+│       │   ├── main.py           # Agent entry point (includes profile tools)
+│       │   └── kb_tool.py        # Knowledge Base search tools
 │       └── cdk/                  # CDK deployment
-├── src/                          # Legacy (not production)
-│   ├── agent.py                  # CLI agent (dev only)
-│   └── app.py                    # Streamlit UI (dev only)
 ├── DEPLOYMENT.md                 # Full deployment guide
 ├── CODE_REVIEW.md                # Architecture review
 └── PRESENTER_GUIDE.md            # Demo walkthrough
@@ -95,13 +91,6 @@ cd cba-frontend
 npm install
 npm run dev          # Development server at localhost:3000
 npm run build        # Production build
-
-# Legacy CLI agent (development only)
-uv sync
-uv run python src/agent.py
-
-# Legacy Streamlit (development only)
-uv run streamlit run src/app.py
 
 # Deploy AgentCore
 cd agentcore-cba/cbaindicatoragent/cdk

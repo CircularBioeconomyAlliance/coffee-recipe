@@ -4,8 +4,6 @@
 
 The CBA Indicator Selection Assistant is an AI-powered tool for helping Circular Bioeconomy Alliance users find monitoring and evaluation indicators for sustainable agriculture projects. This review focuses on the **production stack**: the Next.js frontend, AWS Lambda backend, and Bedrock AgentCore agent.
 
-> **Note:** The Streamlit app (`src/app.py`) and CLI agent (`src/agent.py`) are legacy/development components and are not covered in this review. The Next.js frontend in `cba-frontend/` is the only functional UI for production.
-
 **Overall Assessment:** The production architecture is well-designed. Most critical issues from the original review have been fixed:
 - ✅ Security vulnerabilities addressed (environment variables, input validation, proper error handling)
 - ✅ Frontend now fetches real data from API with session tracking

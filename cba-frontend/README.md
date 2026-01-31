@@ -51,18 +51,21 @@ cba-frontend/
 ├── app/
 │   ├── layout.tsx       # Root layout
 │   ├── page.tsx         # Landing page
+│   ├── chat/            # Chat interface
+│   ├── upload/          # File upload
+│   ├── results/         # Indicator cards
+│   ├── compare/         # Comparison view
 │   └── globals.css      # Global styles
-├── components/          # Reusable components (to be added)
-├── lib/                 # Utilities (to be added)
+├── lib/
+│   └── api.ts           # API client
 └── public/              # Static assets
 ```
 
-## Next Steps
+## Features
 
-1. ✅ Landing page with dual entry points
-2. ✅ Chat interface component
-3. ✅ File upload component
-4. ✅ Indicator cards component
-5. ✅ Comparison view
-6. 🔄 Backend API integration
-7. 🔄 Export functionality (PDF/CSV)
+- Landing page with dual entry points (Chat / Upload)
+- Chat interface with live project profile sidebar
+- PDF upload with AI extraction
+- Indicator cards with filtering
+- Side-by-side comparison view
+- Real-time backend integration via AWS Lambda + AgentCore

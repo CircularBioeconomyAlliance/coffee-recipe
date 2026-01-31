@@ -101,8 +101,7 @@ coffee-recipe/
 │       └── cdk/                  # CDK deployment infrastructure
 │
 ├── cba_inputs/                   # Reference documents (PDFs, Excel)
-├── scripts/                      # Build scripts (Lambda layer)
-└── tests/                        # Test suite
+└── scripts/                      # Build scripts (Lambda layer)
 ```
 
 ---
