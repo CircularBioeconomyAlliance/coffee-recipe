@@ -1,0 +1,60 @@
+default_agent: cbaindicatoragent_Agent
+agents:
+  cbaindicatoragent_Agent:
+    name: cbaindicatoragent_Agent
+    entrypoint: /Users/nityans/Documents/VSCode-Backup/CBA-ME/agentcore-cba/cbaindicatoragent/src/main.py
+    deployment_type: direct_code_deploy
+    runtime_type: PYTHON_3_12
+    platform: linux/arm64
+    container_runtime: null
+    source_path: /Users/nityans/Documents/VSCode-Backup/CBA-ME/agentcore-cba/cbaindicatoragent
+    aws:
+      execution_role: arn:aws:iam::687995992314:role/BedrockAgentCoreExecutionRole
+      execution_role_auto_create: true
+      account: '687995992314'
+      region: us-west-2
+      ecr_repository: null
+      ecr_auto_create: false
+      s3_path: s3://bedrock-agentcore-codebuild-sources-687995992314-us-west-2
+      s3_auto_create: false
+      network_configuration:
+        network_mode: PUBLIC
+        network_mode_config: null
+      protocol_configuration:
+        server_protocol: HTTP
+      observability:
+        enabled: true
+      lifecycle_configuration:
+        idle_runtime_session_timeout: null
+        max_lifetime: null
+    bedrock_agentcore:
+      agent_id: cbaindicatoragent_Agent-buoE288RIT
+      agent_arn: arn:aws:bedrock-agentcore:us-west-2:687995992314:runtime/cbaindicatoragent_Agent-buoE288RIT
+      agent_session_id: 2bb45fa1-b12a-40c3-a478-a037f4591c6b
+    codebuild:
+      project_name: null
+      execution_role: null
+      source_bucket: null
+    memory:
+      mode: STM_ONLY
+      memory_id: cbaindicatoragent_Agent_mem-QAtl509ABJ
+      memory_arn: arn:aws:bedrock-agentcore:us-west-2:687995992314:memory/cbaindicatoragent_Agent_mem-QAtl509ABJ
+      memory_name: cbaindicatoragent_Agent_mem
+      event_expiry_days: 30
+      first_invoke_memory_check_done: true
+      was_created_by_toolkit: false
+    identity:
+      credential_providers: []
+      workload: null
+    aws_jwt:
+      enabled: false
+      audiences: []
+      signing_algorithm: ES384
+      issuer_url: null
+      duration_seconds: 300
+    authorizer_configuration: null
+    request_header_configuration: null
+    oauth_configuration: null
+    api_key_env_var_name: null
+    api_key_credential_provider_name: null
+    is_generated_by_agentcore_create: true
